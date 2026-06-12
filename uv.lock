@@ -668,8 +668,8 @@ dependencies = [
     { name = "rich", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "sft-ext", version = "0.6.2", source = { git = "https://github.com/AetherBreaker/sft_ext?tag=v0.6.2#4143aa81ae103150b2cf24b128e9f47f813f0024" }, extra = ["sftp"], marker = "sys_platform == 'linux'" },
     { name = "sft-ext", version = "0.6.2", source = { editable = "D:/SFT Software Projects/sft_ext" }, extra = ["sftp"], marker = "sys_platform == 'win32'" },
-    { name = "timeclock-entry-processor", version = "1.2.2", source = { git = "https://github.com/AetherBreaker/timeclock_entry_processor?tag=v1.2.2#69bba4bd273b66f7957a01d7f5c78a98472c38f5" }, marker = "sys_platform == 'linux'" },
-    { name = "timeclock-entry-processor", version = "1.2.2", source = { editable = "D:/SFT Software Projects/timeclock_entry_processor" }, marker = "sys_platform == 'win32'" },
+    { name = "timeclock-entry-processor", version = "1.2.3", source = { git = "https://github.com/AetherBreaker/timeclock_entry_processor?tag=v1.2.3#825d55671531cb7feae777bc0782c916e60f8e38" }, marker = "sys_platform == 'linux'" },
+    { name = "timeclock-entry-processor", version = "1.2.3", source = { editable = "D:/SFT Software Projects/timeclock_entry_processor" }, marker = "sys_platform == 'win32'" },
 ]
 
 [package.dev-dependencies]
@@ -692,8 +692,8 @@ requires-dist = [
     { name = "sft-ext", extras = ["sftp"], marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = "==0.6.2" },
     { name = "sft-ext", extras = ["sftp"], marker = "sys_platform == 'linux'", git = "https://github.com/AetherBreaker/sft_ext?tag=v0.6.2" },
     { name = "sft-ext", extras = ["sftp"], marker = "sys_platform == 'win32'", editable = "D:/SFT Software Projects/sft_ext" },
-    { name = "timeclock-entry-processor", marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = ">=1.2.2" },
-    { name = "timeclock-entry-processor", marker = "sys_platform == 'linux'", git = "https://github.com/AetherBreaker/timeclock_entry_processor?tag=v1.2.2" },
+    { name = "timeclock-entry-processor", marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = ">=1.2.3" },
+    { name = "timeclock-entry-processor", marker = "sys_platform == 'linux'", git = "https://github.com/AetherBreaker/timeclock_entry_processor?tag=v1.2.3" },
     { name = "timeclock-entry-processor", marker = "sys_platform == 'win32'", editable = "D:/SFT Software Projects/timeclock_entry_processor" },
 ]
 
@@ -795,8 +795,8 @@ wheels = [
 
 [[package]]
 name = "timeclock-entry-processor"
-version = "1.2.2"
-source = { git = "https://github.com/AetherBreaker/timeclock_entry_processor?tag=v1.2.2#69bba4bd273b66f7957a01d7f5c78a98472c38f5" }
+version = "1.2.3"
+source = { git = "https://github.com/AetherBreaker/timeclock_entry_processor?tag=v1.2.3#825d55671531cb7feae777bc0782c916e60f8e38" }
 resolution-markers = [
     "sys_platform == 'linux'",
 ]
@@ -818,7 +818,7 @@ dependencies = [
 
 [[package]]
 name = "timeclock-entry-processor"
-version = "1.2.2"
+version = "1.2.3"
 source = { editable = "D:/SFT Software Projects/timeclock_entry_processor" }
 resolution-markers = [
     "sys_platform == 'win32'",

@@ -118,7 +118,6 @@ class JobBase(metaclass=SingletonTypeABC):
   def __post_init__(self):
     pass
 
-  @abstractmethod
   def sub_jobs_hook(self, scheduler: Scheduler) -> None:
     """Hook for adding sub-jobs to the scheduler. Override in subclasses if needed."""
     pass

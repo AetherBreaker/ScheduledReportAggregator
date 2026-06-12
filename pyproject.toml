@@ -8,7 +8,7 @@
     "python-dateutil>=2.9.0.post0",
     "rich>=15.0.0",
     "sft-ext[sftp]==0.6.2",
-    "timeclock-entry-processor>=1.2.2",
+    "timeclock-entry-processor>=1.2.4",
   ]
   description = "Add your description here"
   name = "scheduledreportaggregator"
@@ -29,7 +29,7 @@
       { path = "D:\\SFT Software Projects\\sft_ext", editable = true, marker = "sys_platform == 'win32'" },
     ]
     timeclock-entry-processor = [
-      { git = "https://github.com/AetherBreaker/timeclock_entry_processor", marker = "sys_platform == 'linux'", tag = "v1.2.2" },
+      { git = "https://github.com/AetherBreaker/timeclock_entry_processor", marker = "sys_platform == 'linux'", tag = "v1.2.4" },
       { path = "D:\\SFT Software Projects\\timeclock_entry_processor", editable = true, marker = "sys_platform == 'win32'" },
     ]
 
