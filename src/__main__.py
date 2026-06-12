@@ -1,0 +1,131 @@
+if __name__ == "__main__":
+  # Standard library imports
+  from sys import platform
+
+  # Third party imports
+  from rich.console import Console
+
+  # First party imports
+  from sft_ext.logging.init_logging import init_logging
+
+  RICH_CONSOLE = Console(
+    width=None if platform == "win32" else 165,
+    log_time=platform == "win32",
+  )
+  PROJECT_NAME = "IMAPReportCollector"
+  LOGGING_TYPE = "daily"
+
+  init_logging()
+else:
+  # Third party imports
+  from rich import get_console
+
+  RICH_CONSOLE = get_console()
+
+
+# Standard library imports
+import sys
+from asyncio import run, sleep
+from datetime import datetime
+from logging import getLogger
+from typing import TYPE_CHECKING
+
+# Third party imports
+from apscheduler.triggers.cron import CronTrigger
+
+# First party imports
+from environment_init_vars import SETTINGS
+from jobs.timeclock_job import TimeclockJob
+from scheduler_config import Scheduler
+from sft_ext.errors.err_handling import FATAL_EVENT
+
+if TYPE_CHECKING:
+  # Standard library imports
+  from typing import NoReturn
+
+  # Third party imports
+  from apscheduler.triggers.base import BaseTrigger
+
+  # First party imports
+  from jobs import JobBase
+
+
+logger = getLogger(__name__)
+
+
+if not __debug__:
+  # Heartbeat file for health checks
+  HEARTBEAT_FILE = SETTINGS.log_loc_folder / "heartbeat.txt"
+
+  def write_heartbeat():
+    """Write current timestamp to heartbeat file for health monitoring."""
+    try:
+      HEARTBEAT_FILE.write_text(datetime.now(SETTINGS.tz).isoformat())
+    except Exception as e:
+      logger.error(f"Failed to write heartbeat: {e}")
+else:
+
+  def write_heartbeat():
+    pass
+
+
+scheduler = Scheduler.init_scheduler()
+
+
+jobs: tuple[tuple[type[JobBase], BaseTrigger], ...] = (
+  (TimeclockJob, CronTrigger(day_of_week="tues", hour=9, minute=0, second=0)),
+  # (),
+)
+
+
+async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
+  RICH_CONSOLE.rule("[bold red]Booting...[/]", style="bold red")
+  scheduler.add_job(
+    scheduler.print_jobs,
+    CronTrigger(minute="*/1"),
+    id="print_jobs",
+    replace_existing=True,
+  )
+
+  # Heartbeat job - writes timestamp every minute for health monitoring
+  scheduler.add_job(
+    write_heartbeat,
+    CronTrigger(minute="*/1"),
+    id="heartbeat",
+    replace_existing=True,
+  )
+
+  scheduler.start()
+
+  # Write initial heartbeat on startup
+  write_heartbeat()
+
+  scheduler.print_jobs()
+
+  if __debug__:
+    # force run immediately for testing
+    pass
+
+  RICH_CONSOLE.rule("[bold red]Boot Done[/]", style="bold red")
+  # with RICH_CONSOLE.status("Application is running."):
+  await FATAL_EVENT
+
+  if any(job.errored for job, _ in jobs):
+    await sleep(
+      600
+    )  # Sleep for 10 minutes to allow pending operations from non-error-state processors to flush through before exiting
+
+  try:
+    logger.warning("Fatal shutdown: stopping scheduler to freeze application state")
+    scheduler.pause()
+    scheduler.shutdown(wait=False)
+  except Exception as e:
+    logger.error(f"Fatal shutdown: failed to stop scheduler cleanly: {e}", exc_info=True)
+
+  sys.exit(1)
+
+  raise RuntimeError("How did we get here? The main function should never exit normally.")
+
+
+if __name__ == "__main__":
+  run(main())

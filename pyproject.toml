@@ -1,0 +1,50 @@
+[project]
+  dependencies = [
+    "aiologic>=0.16.0",
+    "apscheduler>=3.11.2",
+    "pandas[performance]>=3.0.3",
+    "paramiko>=5.0.0",
+    "pydantic-settings>=2.14.1",
+    "python-dateutil>=2.9.0.post0",
+    "rich>=15.0.0",
+    "sft-ext[sftp]==0.6.2",
+    "timeclock-entry-processor>=1.2.2",
+  ]
+  description = "Add your description here"
+  name = "scheduledreportaggregator"
+  readme = "README.md"
+  requires-python = ">=3.14"
+  version = "0.1.0"
+
+
+[tool.uv]
+  environments = [
+    "sys_platform == 'linux'",
+    "sys_platform == 'win32'",
+  ]
+
+  [tool.uv.sources]
+    sft-ext = [
+      { git = "https://github.com/AetherBreaker/sft_ext", marker = "sys_platform == 'linux'", tag = "v0.6.2" },
+      { path = "D:\\SFT Software Projects\\sft_ext", editable = true, marker = "sys_platform == 'win32'" },
+    ]
+    timeclock-entry-processor = [
+      { git = "https://github.com/AetherBreaker/timeclock_entry_processor", marker = "sys_platform == 'linux'", tag = "v1.2.2" },
+      { path = "D:\\SFT Software Projects\\timeclock_entry_processor", editable = true, marker = "sys_platform == 'win32'" },
+    ]
+
+
+[tool.ruff]
+  extend = "../pyproject.toml"
+
+  src = [
+    "./src",
+  ]
+
+[dependency-groups]
+  dev = [
+    "apscheduler-stubs>=0.1.0.dev2",
+    "pandas-stubs>=3.0.3.260530",
+    "pytest>=9.0.3",
+    "types-python-dateutil>=2.9.0.20260518",
+  ]

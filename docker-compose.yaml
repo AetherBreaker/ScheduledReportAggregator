@@ -1,0 +1,39 @@
+services:
+  scheduled-report-aggregator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: scheduled-report-aggregator
+    restart: no
+    expose:
+      - "8080"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - bash -ec '[ -f /app/persisted_data/logs/heartbeat.txt ] && ts=$$(cat
+          /app/persisted_data/logs/heartbeat.txt 2>/dev/null) && [ -n "$$ts" ]
+          && hb=$$(date -d "$$ts" +%s 2>/dev/null) && now=$$(date +%s) && [
+          $$((now - hb)) -lt 180 ]'
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+    user: nonroot:nonroot
+    # Persist logs and queue backups
+    volumes:
+      - type: bind
+        source: /data/reports_processing_files
+        target: /app/persisted_data
+
+    # Environment variables (customize as needed)
+    environment:
+      # Override secret file paths to use Docker secrets location
+      # Email to Watch
+      - WATCH_EMAIL="info@sweetfiretobacco.com"
+      - WATCH_EMAIL_PWD=${WATCH_EMAIL_PWD:?}
+      - WATCH_POLLING_TIMEOUT_SEC=600
+      # Alerts Emails
+      - ALERTS_EMAIL=info@sweetfiretobacco.com
+      - ALERTS_EMAIL_PWD=${ALERTS_EMAIL_PWD:?}
+      - ALERTS_RECIPIENTS=["jacob.ogden@sweetfiretobacco.com"]
