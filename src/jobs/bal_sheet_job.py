@@ -1,11 +1,11 @@
 # Standard library imports
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from io import StringIO
 from logging import getLogger
-from pathlib import Path, PurePosixPath
-from re import Pattern, compile
+from pathlib import PurePosixPath
+from re import compile
 from typing import TYPE_CHECKING, ClassVar, TypedDict
 
 # Third party imports
@@ -14,13 +14,16 @@ from dateutil.rrule import DAILY, rrule
 from pandas import concat, isna, read_csv, to_numeric
 
 # First party imports
-from environment_init_vars import CWD, HOLDING_FOLDER, SETTINGS
-from jobs import JobBase
+from environment_init_vars import HOLDING_FOLDER, SETTINGS
+from jobs import CanRescheduleJobError, JobBase
 from sft_ext.utils import today
 
 if TYPE_CHECKING:
   # Standard library imports
   from collections.abc import Callable
+  from pathlib import Path
+  from re import Pattern
+  from typing import Literal
 
 logger = getLogger(__name__)
 
@@ -45,9 +48,9 @@ def assemble_ryo_filename_pattern(now: datetime | None = None) -> Pattern[str]:
     )
   )
 
-  years = {str(date.year) for date in dates}
-  months = {f"{date.month:02d}" for date in dates}
-  days = {f"{date.day:02d}" for date in dates}
+  years = {str(dt.year) for dt in dates}
+  months = {f"{dt.month:02d}" for dt in dates}
+  days = {f"{dt.day:02d}" for dt in dates}
 
   years_part = "|".join(years)
   months_part = "|".join(months)
@@ -68,36 +71,109 @@ def assemble_ryo_filename_pattern(now: datetime | None = None) -> Pattern[str]:
   return compile(pattern)
 
 
+def _assemble_range_pattern(
+  end_val: str | int,
+  start_val: str | int = 0,
+  d2_max: int = 9,
+) -> str:
+  """
+  For a given two-digit number str (e.g. 26)
+  convert it into a regex pattern (e.g. 2[0-6]|1[0-9]|0[0-9])
+  Expects only 2 digits
+
+  d2_max is inclusive
+  """
+  end_val = str(end_val)
+  start_val = int(start_val)
+  assert 0 <= start_val <= 9, "total_min must be between 0 and 9"  # noqa: PLR2004
+  assert 0 <= d2_max <= 9, "d2_max must be between 0 and 9"  # noqa: PLR2004
+
+  second_digit = None
+
+  try:
+    first_digit = int(end_val[0])
+    if len(end_val) == 2:  # noqa: PLR2004
+      second_digit = int(end_val[1])
+  except ValueError as e:
+    raise e
+
+  if len(end_val) == 2:  # noqa: PLR2004
+    patterns = []
+
+    for d1 in range(0, first_digit + 1):
+      if d1 == 0:
+        patt = rf"{d1}[{start_val}-{d2_max}]"
+      elif d1 == first_digit:
+        patt = rf"{d1}[0-{second_digit}]"
+      elif d1 > first_digit:
+        raise ValueError("HOW?!")
+      else:
+        patt = rf"{d1}[0-9]"
+      patterns.append(patt)
+
+    return "|".join(patterns)
+
+  elif len(end_val) == 1:
+    return rf"0[{start_val}-{end_val}]"
+  else:
+    raise ValueError("HOW?!")
+
+
+_cached_hmid = rf"({_assemble_range_pattern(end_val=23)})"
+
+_cached_mstrt = rf"({_assemble_range_pattern(end_val=59, start_val=0)})"
+_cached_mmid = rf"({_assemble_range_pattern(end_val=59)})"
+_cached_mend = rf"({_assemble_range_pattern(end_val=59)})"
+
+_cached_sstrt = rf"({_assemble_range_pattern(end_val=59, start_val=0)})"
+_cached_smid = rf"({_assemble_range_pattern(end_val=59)})"
+_cached_send = rf"({_assemble_range_pattern(end_val=59)})"
+
+
 def assemble_sas_filename_pattern(now: datetime | None = None) -> Pattern[str]:
-  now = today() if now is None else now
-  dates = list(
-    rrule(
-      DAILY,
-      dtstart=(now - relativedelta(weekday=SU(-1), hour=0, minute=0, second=0, microsecond=0)),
-      until=(now + relativedelta(weekday=SA(+1), hour=23, minute=59, second=59, microsecond=999999)),
-    )
+  now = today(tzinfo=SETTINGS.tz) if now is None else now
+  start_est = now - relativedelta(weekday=SU(-1), hour=0, minute=0, second=0, microsecond=0)
+  end_est = now + relativedelta(weekday=SA(+1), hour=23, minute=59, second=59, microsecond=999999)
+  rrule_end_est = end_est + relativedelta(weekday=SU(+1), hour=0, minute=0, second=0, microsecond=0)
+  # convert from local tz (SETTINGS.tz) to UTC
+  start = start_est.astimezone(UTC)
+  end = end_est.astimezone(UTC)
+  rrule_end = rrule_end_est.astimezone(UTC)
+
+  dates = list(rrule(DAILY, dtstart=start, until=rrule_end))
+
+  days = {f"{dt.day:02d}" for dt in dates[1:-1]}
+
+  dmid = "|".join(days)
+
+  hstrt = rf"({_assemble_range_pattern(end_val=23, start_val=start.hour)})"
+  hmid = _cached_hmid
+  hend = rf"({_assemble_range_pattern(end_val=end.hour)})"
+
+  assembled_year = r"(?P<year>{syear}|{eyear})".format(syear=start.year, eyear=end.year)  # noqa: UP032
+  assembled_month = r"(?P<month>{smonth:02d}|{emonth:02d})".format(smonth=start.month, emonth=end.month)  # noqa: UP032
+  assembled_day = r"(?P<day>(?P<dstrt>{sday})|(?P<dmid>{dmid})|(?P<dend>{eday}))".format(sday=start.day, dmid=dmid, eday=end.day)  # noqa: UP032
+  assembled_hour = r"(?P<hour>(?(dstrt){hstrt}|(?(dmid){hmid}|{hend})))".format(hstrt=hstrt, hmid=hmid, hend=hend)  # noqa: UP032
+  assembled_minute = r"(?P<minute>(?(dstrt){mstrt}|(?(dmid){mmid}|{mend})))".format(  # noqa: UP032
+    mstrt=_cached_mstrt, mmid=_cached_mmid, mend=_cached_mend
+  )
+  assembled_second = r"(?P<second>(?(dstrt){sstrt}|(?(dmid){smid}|{send})))".format(  # noqa: UP032
+    sstrt=_cached_sstrt, smid=_cached_smid, send=_cached_send
+  )
+  assembled_microsecond = r"(?P<microsecond>\d{1,6})"
+
+  timestamp = r"(?P<timestamp>{year}-{month}-{day}T{hour}:{minute}:{second}\.{microsecond})".format(  # noqa: UP032
+    year=assembled_year,
+    month=assembled_month,
+    day=assembled_day,
+    hour=assembled_hour,
+    minute=assembled_minute,
+    second=assembled_second,
+    microsecond=assembled_microsecond,
   )
 
-  years = {str(date.year) for date in dates}
-  months = {f"{date.month:02d}" for date in dates}
-  days = {f"{date.day:02d}" for date in dates}
+  pattern = r"^Sweet_Fire_{timestamp}\.csv$".format(timestamp=timestamp)  # noqa: UP032
 
-  years_part = "|".join(years)
-  months_part = "|".join(months)
-  days_part = "|".join(days)
-
-  pattern = (
-    rf"^RYO_ACH_Drafts_"
-    r"(?P<timestamp>"
-    rf"(?P<year>{years_part})"
-    rf"(?P<month>{months_part})"
-    rf"(?P<day>{days_part})"
-    r"(?P<hour>\d{2})"
-    r"(?P<minute>\d{2})"
-    r"(?P<second>\d{2})"
-    r"(?P<microsecond>\d{6})"
-    r")\.csv$"
-  )
   return compile(pattern)
 
 
@@ -129,24 +205,23 @@ class BalanceSheetJob(JobBase):
 
   async def main_job(self) -> None:
     downloaded_files = self.download_files()
-    if downloaded_files is None:
-      self.error_reschedule(reason="missing file")
-      return
 
     try:
       report_path = self.assemble_report(downloaded_files)
     except Exception as e:
       logger.exception(f"{self.__class__.__name__}: Error assembling report:", exc_info=e)
-      self.error_reschedule(count=True, reason="error in report assembly")
-      return
+      raise CanRescheduleJobError(
+        "error in report assembly",
+        count_error=True,
+      ) from e
 
     try:
       self.email_report(report_path)
     except Exception as e:
       logger.exception(f"{self.__class__.__name__}: Error emailing report:", exc_info=e)
-      self.error_reschedule(count=True, reason="error in emailing report")
+      raise CanRescheduleJobError("error in emailing report", count_error=True) from e
 
-  def download_files(self) -> DownloadedFiles | None:
+  def download_files(self) -> DownloadedFiles:
     downloaded_files: dict[str, Path] = {}
     with self.jobs_cvar.set(self.__class__.__name__):
       for ftp_key, file_vars in self.file_details.items():
@@ -163,7 +238,9 @@ class BalanceSheetJob(JobBase):
             logger.warning(f"No matching files found in {file_vars} for FTP {ftp_key}")
             for file in downloaded_files.values():
               file.unlink(missing_ok=True)
-            return
+            raise CanRescheduleJobError(
+              f"Error in downloading files: missing {ftp_key} file", reason=f"missing {ftp_key} file", count_error=False
+            ) from None
 
           remote_file = file_vars.pickup_folder / youngest_file.filename
           local_file = file_vars.local_holding_folder / youngest_file.filename
@@ -277,14 +354,50 @@ class BalanceSheetJob(JobBase):
 
     return out_file
 
-  def email_report(self, report_path: Path) -> None:
-    pass
+  def email_report(self, report_path: Path) -> None: ...
+
+  def test_download(self, ftp_key: Literal["ryo", "sas"]) -> Path | None:
+    file_vars = self.file_details[ftp_key]
+    with self.ftp_handlers[ftp_key].start_session() as conn:
+      files = conn.listdir(file_vars.pickup_folder.as_posix())
+      pattern = file_vars.filename_pattern_factory(today() - relativedelta(weeks=1))
+
+      filtered_files = list(filter(lambda f: pattern.match(f.filename), files))
+
+      for file in filtered_files:
+        logger.info(f"Matched file: {file.filename} with modified time {file.modified_time}")
+
+      # check that filtered_files is not empty before calling max, otherwise it will raise a ValueError
+      try:
+        youngest_file = max(filtered_files, key=lambda f: f.modified_time)
+      except ValueError:
+        logger.warning(f"No matching files found in {file_vars} for FTP {ftp_key}")
+        return
+
+      remote_file = file_vars.pickup_folder / youngest_file.filename
+      local_file = file_vars.local_holding_folder / youngest_file.filename
+      with local_file.open("wb") as file:
+        conn.download_file(remote_path=remote_file.as_posix(), callback=file.write)
 
 
 if __name__ == "__main__":
-  test_files = DownloadedFiles(
-    ryo=CWD / "example files" / "SFT - RYO ACH Drafts.csv",
-    sas=CWD / "example files" / "searchresults.csv",
+  # test_files = DownloadedFiles(
+  #   ryo=CWD / "example files" / "SFT - RYO ACH Drafts.csv",
+  #   sas=CWD / "example files" / "searchresults.csv",
+  # )
+
+  # BalanceSheetJob.assemble_report(test_files)
+
+  # Third party imports
+  from apscheduler.triggers.date import DateTrigger
+
+  # First party imports
+  from scheduler_config import Scheduler
+
+  test_job = BalanceSheetJob(
+    Scheduler(),
+    "test_timeclock_job",
+    DateTrigger(run_date=datetime.now(tz=SETTINGS.tz)),
   )
 
-  BalanceSheetJob.assemble_report(test_files)
+  result = test_job.test_download("sas")
