@@ -34,7 +34,9 @@ from typing import TYPE_CHECKING
 from apscheduler.triggers.cron import CronTrigger
 
 # First party imports
+from custom_types import CronArgs, DayOfWeek
 from environment_init_vars import SETTINGS
+from jobs.bal_sheet_job import BalanceSheetJob
 from jobs.timeclock_job import TimeclockJob
 from scheduler_config import Scheduler
 from sft_ext.errors.err_handling import FATAL_EVENT
@@ -42,9 +44,6 @@ from sft_ext.errors.err_handling import FATAL_EVENT
 if TYPE_CHECKING:
   # Standard library imports
   from typing import NoReturn
-
-  # Third party imports
-  from apscheduler.triggers.base import BaseTrigger
 
   # First party imports
   from jobs import JobBase
@@ -72,20 +71,37 @@ else:
 scheduler = Scheduler.init_scheduler()
 
 
-jobs: tuple[tuple[type[JobBase], BaseTrigger], ...] = (
-  (TimeclockJob, CronTrigger(day_of_week="tues", hour=9, minute=0, second=0)),
-  # (),
+jobs: tuple[tuple[type[JobBase], CronArgs], ...] = (
+  (TimeclockJob, CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=9, minute=0, second=0)),
+  (BalanceSheetJob, CronArgs(day_of_week=DayOfWeek.WEDNESDAY, hour=9, minute=0, second=0)),
 )
+
+
+async def reschedule_jobs() -> None:
+  scheduler.pause()
+
+  scheduler.remove_all_jobs("general_jobs")
+
+  for job_cls, cron_args in jobs:
+    job = job_cls.init_job(
+      scheduler=scheduler,
+      job_id=job_cls.__name__,
+      **cron_args,
+    )
+    job.schedule_registered_jobs()
+
+  scheduler.resume()
 
 
 async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
   RICH_CONSOLE.rule("[bold red]Booting...[/]", style="bold red")
-  scheduler.add_job(
-    scheduler.print_jobs,
-    CronTrigger(minute="*/1"),
-    id="print_jobs",
-    replace_existing=True,
-  )
+  # scheduler.add_job(
+  #   scheduler.print_jobs,
+  #   CronTrigger(minute="*/1"),
+  #   id="print_jobs",
+  #   replace_existing=True,
+  #   jobstore="system_jobs",
+  # )
 
   # Heartbeat job - writes timestamp every minute for health monitoring
   scheduler.add_job(
@@ -93,6 +109,20 @@ async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
     CronTrigger(minute="*/1"),
     id="heartbeat",
     replace_existing=True,
+    jobstore="system_jobs",
+  )
+
+  scheduler.add_job(
+    reschedule_jobs,
+    CronTrigger(
+      day_of_week="sun",
+      hour=0,
+      minute=0,
+      second=0,
+    ),
+    id="reschedule_jobs",
+    replace_existing=True,
+    jobstore="system_jobs",
   )
 
   scheduler.start()
