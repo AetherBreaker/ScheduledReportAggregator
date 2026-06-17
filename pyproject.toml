@@ -41,6 +41,20 @@
     "./src",
   ]
 
+
+[tool.pyright]
+  extraPaths = [
+    "src",
+  ]
+  typeCheckingMode = "standard"
+
+  executionEnvironments = [
+    { root = "src", extraPaths = [
+      "src",
+    ] },
+  ]
+
+
 [dependency-groups]
   dev = [
     "apscheduler-stubs>=0.1.0.dev2",
