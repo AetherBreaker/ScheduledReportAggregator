@@ -142,7 +142,8 @@ class Scheduler(AsyncIOScheduler):
 
     job_stores = {
       "default": MemoryJobStore(),
-      "order_processing": MemoryJobStore(),
+      "system_jobs": MemoryJobStore(),
+      "general_jobs": MemoryJobStore(),
     }
 
     job_defaults = {
