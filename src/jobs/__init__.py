@@ -3,33 +3,32 @@ from abc import abstractmethod
 from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import datetime
+from functools import wraps
+from inspect import iscoroutinefunction
 from logging import getLogger
 from pathlib import PurePosixPath
-from typing import TYPE_CHECKING, NamedTuple, TypedDict, overload
+from typing import TYPE_CHECKING
 
 # Third party imports
 from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.date import DateTrigger
 from dateutil.relativedelta import FR, MO, SA, SU, TH, TU, WE, relativedelta
 
 # First party imports
+from custom_types import CronArgs, DayOfWeek, JobID, JobIDPrefix, JobIDSuffix, SubJobTriggerArgs
 from environment_init_vars import HOLDING_FOLDER, SETTINGS
 from ftp_configs import RYOSFTPClient, SASSFTPClient, SFTSFTPClient
 from sft_ext.errors.err_handling import FATAL_EVENT
 from sft_ext.ftp.adapter import AdaptedSFTP, FTPAdapter
-from sft_ext.types import StrEnum
 from sft_ext.types.abc import SingletonTypeABC
 from sft_ext.utils import today
 
 if TYPE_CHECKING:
   # Standard library imports
-  from collections.abc import Callable
-  from datetime import timedelta, timezone
-  from typing import Any, ClassVar, NotRequired, Unpack
-  from zoneinfo import ZoneInfo
+  from collections.abc import Callable, Coroutine
+  from datetime import timedelta
+  from typing import Any, ClassVar, Unpack
 
   # Third party imports
-  from apscheduler.triggers.base import BaseTrigger
   from dateutil._common import weekday
 
   # First party imports
@@ -37,17 +36,22 @@ if TYPE_CHECKING:
 
 logger = getLogger(__name__)
 
+
+@dataclass
+class UseArgs:
+  year: bool = False
+  month: bool = False
+  day: bool = False
+  day_of_week: bool = True
+  hour: bool = True
+  minute: bool = True
+  second: bool = False
+
+
+DEFAULT_USE_ARGS = UseArgs()
+
+
 FTP_CVAR = ContextVar("FTP_CVAR")
-
-
-class DayOfWeek(StrEnum):
-  SUNDAY = "sun"
-  MONDAY = "mon"
-  TUESDAY = "tue"
-  WEDNESDAY = "wed"
-  THURSDAY = "thu"
-  FRIDAY = "fri"
-  SATURDAY = "sat"
 
 
 dtutil_weekday_map: dict[DayOfWeek | None, weekday] = {
@@ -72,36 +76,6 @@ num_to_weekday_map: dict[int, DayOfWeek] = {
 }
 
 
-class CronArgs(TypedDict):
-  year: NotRequired[int | str | None]
-  month: NotRequired[int | str | None]
-  day: NotRequired[int | str | None]
-  day_of_week: NotRequired[DayOfWeek | None]
-  hour: NotRequired[int | str | None]
-  minute: NotRequired[int | str | None]
-  second: NotRequired[int | str | None]
-  timezone: NotRequired[ZoneInfo | timezone | None]
-
-
-@dataclass
-class UseArgs:
-  year: bool = False
-  month: bool = False
-  day: bool = False
-  day_of_week: bool = True
-  hour: bool = True
-  minute: bool = True
-  second: bool = False
-
-
-DEFAULT_USE_ARGS = UseArgs()
-
-
-class SubJobTriggerArgs(NamedTuple):
-  delta: timedelta | relativedelta
-  use_args: UseArgs = DEFAULT_USE_ARGS
-
-
 class CanRescheduleJobError(Exception):
   """Custom exception to indicate that a job should be automatically rescheduled."""
 
@@ -121,8 +95,7 @@ class JobError(Exception):
 
 
 class JobBase(metaclass=SingletonTypeABC):
-  jobs_cvar = FTP_CVAR
-  subjob_mainjob_offset: ClassVar[int] = 0  # seconds
+  jobname_cvar = FTP_CVAR
 
   ftp_handlers: ClassVar = {
     "sft": FTPAdapter[AdaptedSFTP](SFTSFTPClient, container_cvar=FTP_CVAR),
@@ -136,88 +109,121 @@ class JobBase(metaclass=SingletonTypeABC):
 
   reschedule_delay_minutes: ClassVar[int] = 10  # minutes to delay when rescheduling after an error
 
-  sub_jobs_register: ClassVar[dict[str, tuple[Callable[..., Any], SubJobTriggerArgs]]] = {}
-
   reports_pickup_base_folder = PurePosixPath("/upload")
   report_path_subfolder: str = ""
 
   reports_pickup_folder: PurePosixPath = reports_pickup_base_folder / report_path_subfolder
 
-  @overload
-  def __init__(
-    self,
-    scheduler: Scheduler,
-    job_id: str,
-    trigger: BaseTrigger,
-  ) -> None: ...
+  jobs_register: dict[JobIDSuffix, tuple[Callable[..., Any], CronArgs | SubJobTriggerArgs]]
+  extra_jobs_register: dict[JobIDSuffix, tuple[Callable[..., Any], SubJobTriggerArgs]]
 
-  @overload
-  def __init__(
-    self,
-    scheduler: Scheduler,
-    job_id: str,
-    **kwargs: Unpack[CronArgs],
-  ) -> None: ...
+  active_jobs: dict[JobID, CronArgs | SubJobTriggerArgs]
 
-  def __init__(
-    self,
-    scheduler: Scheduler,
-    job_id: str,
-    trigger: BaseTrigger | None = None,
-    **kwargs: Unpack[CronArgs],
-  ) -> None:
-    self.job_id = job_id
-    self.scheduler = scheduler
+  active_args: dict[JobID, CronArgs]
 
-    self.original_cron_args = kwargs  # save original cron args to reset schedule each week
-    self.cron_args = kwargs  # replace stored cron args
-    self.last_run_time = None
+  job_id: ContextVar[JobID] = ContextVar("job_id")
 
-    if trigger is None:
-      self.original_trigger = self.generate_trigger(**kwargs)
-    else:
-      self.original_trigger = trigger
-    self.trigger = self.original_trigger
+  base_job_id: JobIDPrefix
+  scheduler: Scheduler
+  jobstore: str
+
+  def __init__(self):
+    self.active_jobs = {}  # track active jobs for cleanup if needed
+    self.extra_jobs_register = {}
 
     self.job_holding_folder = HOLDING_FOLDER / self.__class__.__name__.lower()
     self.job_holding_folder.mkdir(parents=True, exist_ok=True)
 
-    self.sub_jobs_hook()
-    self.schedule_self()
     self.__post_init__()  # call post init hook for any additional setup in subclasses
 
-  def __post_init__(self):
-    pass
+  @classmethod
+  def init_job(
+    cls,
+    scheduler: Scheduler,
+    job_id: JobIDPrefix,
+    jobstore: str = "general_jobs",
+    **kwargs: Unpack[CronArgs],
+  ) -> JobBase:
+    self = cls()
+    self.base_job_id = job_id
+    self.scheduler = scheduler
+    self.jobstore = jobstore
 
-  def sub_jobs_hook(self) -> None:
+    self.main_cron_args = CronArgs(**kwargs)
+
+    self.jobs_register = {
+      "main_job": (self.main_job, self.main_cron_args),
+    }
+
+    return self
+
+  def __post_init__(self): ...
+
+  def schedule_registered_jobs(self, base_cron_args: CronArgs | None = None) -> None:
     """Hook for adding sub-jobs to the scheduler. Override in subclasses if needed."""
-    for sub_job_id, (sub_job_func, sub_job_args) in self.sub_jobs_register.items():
-      sub_trigger = self.generate_trigger(
-        **self.shift_cron_args(self.original_cron_args, *sub_job_args),
-      )
-      self.scheduler.add_job(sub_job_func, trigger=sub_trigger, id=sub_job_id, replace_existing=True)
+    for job_id_suffix, (job_func, job_args) in self.jobs_register.items():
+      wrapped_func, trigger, job_id = self.prep_job(job_func, job_args, job_id_suffix, base_cron_args or self.main_cron_args)
 
-  async def run_main_job(self) -> None:
+      self.scheduler.add_job(wrapped_func, trigger=trigger, id=job_id, replace_existing=True)
+
+  def prep_job(
+    self,
+    func: Callable[..., Any],
+    trigger_args: CronArgs | SubJobTriggerArgs,
+    job_id_suffix: str,
+    base_cron_args: CronArgs | None = None,
+  ) -> tuple[Callable[..., Any], CronTrigger, JobID]:
+    """Schedules a job with the given function, trigger arguments, and job ID suffix."""
+    job_id: JobID = f"{self.base_job_id}_{job_id_suffix}"
+
+    evaled_args = (
+      self.shift_cron_args(base_cron_args or self.main_cron_args, *trigger_args)  # Is sub job with delta args
+      if isinstance(trigger_args, SubJobTriggerArgs)
+      else trigger_args  # Is main job
+    )
+
+    trigger = CronTrigger(**evaled_args)
+
+    # Add the job to the active jobs dict with its trigger args for tracking.
+    self.active_jobs[job_id] = trigger_args
+    self.active_args[job_id] = evaled_args
+
+    # Wrap job in run_job to handle error state and rescheduling logic, then add to scheduler
+    wrapped_func = self.run_job(func, job_id)
+
+    return wrapped_func, trigger, job_id
+
+  def run_job[**Params_T, Return_T: Any](
+    self, func: Callable[Params_T, Return_T], job_id: JobID
+  ) -> Callable[Params_T, Coroutine[Any, Any, Return_T | None]]:
     """Wrapper for main_job to handle error state."""
-    if self.errored:
-      logger.error(f"{self.__class__.__name__}: Job is in errored state. Skipping execution.")
-      return
-    self.last_run_time = datetime.now(tz=SETTINGS.tz)
 
-    try:
-      await self.main_job()
-    except CanRescheduleJobError as e:
-      self.error_reschedule(count=e.count_error, reason=e.reason)
+    @wraps(func)
+    async def wrapper(*args, **kwargs) -> Return_T | None:
+      if self.errored:
+        logger.error(f"{self.__class__.__name__}: Job is in errored state. Skipping execution.")
+        return
 
-    except JobError as e:
-      logger.error(f"{self.__class__.__name__}: Job encountered a major error. Freezing this jobs execution", exc_info=e)
-      self.errored = True
-      FATAL_EVENT.set()  # trigger shutdown in main
+      with self.job_id.set(job_id), self.jobname_cvar.set(self.__class__.__name__):
+        try:
+          if iscoroutinefunction(func):
+            return await func(*args, **kwargs)
+          else:
+            return func(*args, **kwargs)
+        except CanRescheduleJobError as e:
+          self.error_reschedule(count=e.count_error, reason=e.reason)
 
-    except Exception as e:
-      logger.exception(f"{self.__class__.__name__}: Unexpected error in main_job:", exc_info=e)
-      self.errored = True
-      FATAL_EVENT.set()  # trigger shutdown in main
+        except JobError as e:
+          logger.error(f"{self.__class__.__name__}: Job encountered a major error. Freezing this jobs execution", exc_info=e)
+          self.errored = True
+          FATAL_EVENT.set()  # trigger shutdown in main
+
+        except Exception as e:
+          logger.exception(f"{self.__class__.__name__}: Unexpected error in main_job:", exc_info=e)
+          self.errored = True
+          FATAL_EVENT.set()  # trigger shutdown in main
+
+    return wrapper
 
   @abstractmethod
   async def main_job(self) -> None:
@@ -226,34 +232,22 @@ class JobBase(metaclass=SingletonTypeABC):
 
   def cancel_self(self) -> None:
     """Cancels this job from the scheduler."""
-    self.scheduler.remove_job(self.job_id)
-
-  def schedule_self(self) -> None:
-    """Schedules this job in the scheduler."""
-    self.scheduler.add_job(self.main_job, self.trigger, id=self.job_id, replace_existing=True)
+    for job_id in self.active_jobs.copy().keys():
+      self.scheduler.remove_job(job_id)
+      self.active_jobs.pop(job_id, None)
+      self.active_args.pop(job_id, None)
 
   def reset_schedule(self) -> None:
     """Resets the job's schedule to the original cron arguments."""
-    self.trigger = self.original_trigger
-    self.scheduler.reschedule_job(self.job_id, trigger=self.trigger)
+    self.cancel_self()
+    self.schedule_registered_jobs()
 
-  @overload
-  def reschedule_self(
-    self,
-    new_trigger: BaseTrigger,
-  ) -> None: ...
-
-  @overload
-  def reschedule_self(
-    self,
-    **kwargs: Unpack[CronArgs],
-  ) -> None: ...
-
-  def reschedule_self(self, new_trigger: BaseTrigger | None = None, **kwargs: Unpack[CronArgs]) -> None:
-    """Reschedules this job with a new trigger."""
-    if new_trigger is None:
-      new_trigger = self.generate_trigger(**kwargs)
-    self.scheduler.reschedule_job(self.job_id, trigger=new_trigger)
+  def reschedule_self(self, **kwargs: Unpack[CronArgs]) -> None:
+    """Clears this job and rebuilds it's schedule with a new base trigger."""
+    self.cancel_self()
+    self.main_cron_args = CronArgs(**kwargs)
+    self.jobs_register["main_job"] = (self.main_job, self.main_cron_args)
+    self.schedule_registered_jobs()
 
   def error_reschedule(self, count: bool = False, reason: str = "error in job") -> None:
     if count:
@@ -266,13 +260,11 @@ class JobBase(metaclass=SingletonTypeABC):
         return
 
     logger.info(f"{self.__class__.__name__}: Rescheduling due to {reason}")
-    now = datetime.now(tz=SETTINGS.tz)
-    new_fire_time = (
-      self.last_run_time + relativedelta(minutes=self.reschedule_delay_minutes)
-      if self.last_run_time is not None
-      else now + relativedelta(minutes=self.reschedule_delay_minutes)
-    )
-    self.reschedule_self(new_trigger=DateTrigger(run_date=new_fire_time))
+
+    delta = relativedelta(minutes=self.reschedule_delay_minutes)
+    new_args = self.shift_cron_args(self.main_cron_args, delta)
+
+    self.reschedule_self(**new_args)
 
   @staticmethod
   def check_if_this_week(dt: datetime) -> bool:
@@ -281,8 +273,29 @@ class JobBase(metaclass=SingletonTypeABC):
     end_of_week = start_of_week + relativedelta(weekday=SA(+1), hour=23, minute=59, second=59, microsecond=999999)
     return start_of_week <= dt <= end_of_week
 
-  def shift_cron_args(self, args: CronArgs, delta: timedelta | relativedelta, use_args: UseArgs = DEFAULT_USE_ARGS) -> CronArgs:
+  @staticmethod
+  def extract_use_args(trigger_args: CronArgs) -> UseArgs:
+    """
+    Attempt to extract which cron args are being used in the provided trigger args to determine which ones to shift when rescheduling.
+    If this fails, it will default to DEFAULT_USE_ARGS
+    """
+    try:
+      return UseArgs(
+        year="year" in trigger_args and trigger_args["year"] is not None,
+        month="month" in trigger_args and trigger_args["month"] is not None,
+        day="day" in trigger_args and trigger_args["day"] is not None,
+        day_of_week="day_of_week" in trigger_args and trigger_args["day_of_week"] is not None,
+        hour="hour" in trigger_args and trigger_args["hour"] is not None,
+        minute="minute" in trigger_args and trigger_args["minute"] is not None,
+        second="second" in trigger_args and trigger_args["second"] is not None,
+      )
+    except Exception:
+      return DEFAULT_USE_ARGS
+
+  def shift_cron_args(self, args: CronArgs, delta: timedelta | relativedelta, use_args: UseArgs | None = None) -> CronArgs:
     """Shifts the cron arguments by a specified timedelta."""
+    if use_args is None:
+      use_args = self.extract_use_args(args)
 
     new_cron_args = {
       "year": args.get("year") if use_args.year else None,
@@ -315,16 +328,12 @@ class JobBase(metaclass=SingletonTypeABC):
 
     # convert shifted_dt back to cron args by taking the relevant fields from the shifted datetime
     return CronArgs(
-      year=shifted_dt.year if use_args.year else None,
-      month=shifted_dt.month if use_args.month else None,
-      day=shifted_dt.day if use_args.day else None,
+      year=(year if isinstance(year := args.get("year"), str) else shifted_dt.year) if use_args.year else None,
+      month=(month if isinstance(month := args.get("month"), str) else shifted_dt.month) if use_args.month else None,
+      day=(day if isinstance(day := args.get("day"), str) else shifted_dt.day) if use_args.day else None,
       day_of_week=num_to_weekday_map[shifted_dt.weekday()] if use_args.day_of_week else None,
-      hour=shifted_dt.hour if use_args.hour else None,
-      minute=shifted_dt.minute if use_args.minute else None,
-      second=shifted_dt.second if use_args.second else None,
+      hour=(hour if isinstance(hour := args.get("hour"), str) else shifted_dt.hour) if use_args.hour else None,
+      minute=(minute if isinstance(minute := args.get("minute"), str) else shifted_dt.minute) if use_args.minute else None,
+      second=(second if isinstance(second := args.get("second"), str) else shifted_dt.second) if use_args.second else None,
       timezone=args.get("timezone"),
     )
-
-  def generate_trigger(self, **kwargs: Unpack[CronArgs]) -> CronTrigger:
-    """Generates a trigger based on the provided cron arguments."""
-    return CronTrigger(**kwargs)

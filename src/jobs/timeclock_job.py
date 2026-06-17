@@ -1,18 +1,13 @@
 # Standard library imports
 from atexit import register
-from datetime import datetime
 from logging import getLogger
 from pathlib import Path
 from subprocess import run
 from sys import executable
 
-# Third party imports
-from apscheduler.triggers.date import DateTrigger
-
 # First party imports
 from environment_init_vars import CWD, SETTINGS
 from jobs import CanRescheduleJobError, JobBase
-from scheduler_config import Scheduler
 
 logger = getLogger(__name__)
 
@@ -143,8 +138,4 @@ class TimeclockJob(JobBase):
 if __name__ == "__main__":
   csv_file = CWD / "Time-Clock-Entry-Report_2026-05-14_19-31-12.csv"
 
-  TimeclockJob(
-    Scheduler(),
-    "test_timeclock_job",
-    DateTrigger(run_date=datetime.now(tz=SETTINGS.tz)),
-  ).run_processor(csv_file)
+  TimeclockJob().run_processor(csv_file)

@@ -2,10 +2,13 @@
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from email.message import EmailMessage
 from io import StringIO
 from logging import getLogger
 from pathlib import PurePosixPath
 from re import compile
+from smtplib import SMTP
+from ssl import create_default_context
 from typing import TYPE_CHECKING, ClassVar, TypedDict
 
 # Third party imports
@@ -14,7 +17,7 @@ from dateutil.rrule import DAILY, rrule
 from pandas import concat, isna, read_csv, to_numeric
 
 # First party imports
-from environment_init_vars import HOLDING_FOLDER, SETTINGS
+from environment_init_vars import CWD, SETTINGS
 from jobs import CanRescheduleJobError, JobBase
 from sft_ext.utils import today
 
@@ -162,7 +165,7 @@ def assemble_sas_filename_pattern(now: datetime | None = None) -> Pattern[str]:
   )
   assembled_microsecond = r"(?P<microsecond>\d{1,6})"
 
-  timestamp = r"(?P<timestamp>{year}-{month}-{day}T{hour}:{minute}:{second}\.{microsecond})".format(  # noqa: UP032
+  timestamp = r"(?P<timestamp>{year}-{month}-{day}T{hour}_{minute}_{second}\.{microsecond})".format(  # noqa: UP032
     year=assembled_year,
     month=assembled_month,
     day=assembled_day,
@@ -182,12 +185,12 @@ class DownloadedFiles(TypedDict):
   sas: Path
 
 
-job_output_folder = HOLDING_FOLDER / "balance_sheet_reports"
-job_output_folder.mkdir(parents=True, exist_ok=True)
-
-
 class BalanceSheetJob(JobBase):
   reschedule_delay_minutes: ClassVar[int] = 10
+  email_recipients = (
+    "denirosaco@sweetfiretobacco.com",
+    "jacob.ogden@sweetfiretobacco.com",
+  )
 
   def __post_init__(self) -> None:
     self.file_details = {
@@ -202,6 +205,8 @@ class BalanceSheetJob(JobBase):
         local_holding_folder=self.job_holding_folder / "sas",
       ),
     }
+    self.job_output_folder = self.job_holding_folder / "output"
+    self.job_output_folder.mkdir(parents=True, exist_ok=True)
 
   async def main_job(self) -> None:
     downloaded_files = self.download_files()
@@ -223,7 +228,7 @@ class BalanceSheetJob(JobBase):
 
   def download_files(self) -> DownloadedFiles:
     downloaded_files: dict[str, Path] = {}
-    with self.jobs_cvar.set(self.__class__.__name__):
+    with self.jobname_cvar.set(self.__class__.__name__):
       for ftp_key, file_vars in self.file_details.items():
         with self.ftp_handlers[ftp_key].start_session() as conn:
           files = conn.listdir(file_vars.pickup_folder.as_posix())
@@ -251,8 +256,7 @@ class BalanceSheetJob(JobBase):
 
     return DownloadedFiles(**downloaded_files)
 
-  @staticmethod
-  def assemble_report(downloaded_files: DownloadedFiles) -> Path:
+  def assemble_report(self, downloaded_files: DownloadedFiles) -> Path:
     with downloaded_files["ryo"].open("r", encoding="utf-8") as ryo_file:
       ryo_first_line = ryo_file.readline()
       ryo_df = read_csv(
@@ -323,7 +327,7 @@ class BalanceSheetJob(JobBase):
     # sas_grouped.to_csv("test_sas_agged.csv", header=True, index=False)
 
     # join sas_total to ryo_df on storenum
-    merged_df = ryo_df.merge(sas_grouped, on="storenum", how="left")
+    merged_df = ryo_df.merge(sas_grouped, on="storenum", how="outer")
     merged_df = merged_df[
       [
         "store",
@@ -347,20 +351,43 @@ class BalanceSheetJob(JobBase):
 
     now = datetime.now(tz=SETTINGS.tz)
 
-    out_file = job_output_folder / f"sas_ryo_balance_sheet_{now.strftime('%Y%m%d%H%M%S%f')}.csv"
+    out_file = self.job_output_folder / f"sas_ryo_balance_sheet_{now.strftime('%Y%m%d%H%M%S%f')}.csv"
 
     with out_file.open("w") as report_file:
       report_file.write(io_stream.getvalue())
 
     return out_file
 
-  def email_report(self, report_path: Path) -> None: ...
+  def email_report(self, report_path: Path) -> None:
+    msg = EmailMessage()
+    msg.set_content("Attached is the latest RYO/SAS balance sheet report.")
+    msg["Subject"] = f"SAS/RYO Balance Sheet Report - {report_path.stem}"
+    msg["From"] = SETTINGS.alerts_email
+    msg["To"] = ", ".join(self.email_recipients)
+    msg[""]
 
-  def test_download(self, ftp_key: Literal["ryo", "sas"]) -> Path | None:
+    ctx = create_default_context()
+
+    msg.add_attachment(
+      report_path.read_bytes(),
+      maintype="text",
+      subtype="csv",
+      filename=report_path.name,
+    )
+
+    with SMTP(SETTINGS.alerts_smtp_server, SETTINGS.alerts_smtp_port) as smtp:
+      smtp.ehlo()
+      smtp.starttls(context=ctx)
+      smtp.ehlo()
+      smtp.login(SETTINGS.alerts_email, SETTINGS.alerts_email_pwd)
+      smtp.send_message(msg)
+    logger.info(f"Email sent with report {report_path.name} to {self.email_recipients}")
+
+  def _test_download(self, ftp_key: Literal["ryo", "sas"]) -> Path | None:
     file_vars = self.file_details[ftp_key]
     with self.ftp_handlers[ftp_key].start_session() as conn:
-      files = conn.listdir(file_vars.pickup_folder.as_posix())
-      pattern = file_vars.filename_pattern_factory(today() - relativedelta(weeks=1))
+      files = list(conn.listdir(file_vars.pickup_folder.as_posix()))
+      pattern = file_vars.filename_pattern_factory(today())
 
       filtered_files = list(filter(lambda f: pattern.match(f.filename), files))
 
@@ -379,25 +406,21 @@ class BalanceSheetJob(JobBase):
       with local_file.open("wb") as file:
         conn.download_file(remote_path=remote_file.as_posix(), callback=file.write)
 
+  def _test_assemble_report(self, downloaded_files: DownloadedFiles) -> Path:
+    return self.assemble_report(downloaded_files)
+
 
 if __name__ == "__main__":
-  # test_files = DownloadedFiles(
-  #   ryo=CWD / "example files" / "SFT - RYO ACH Drafts.csv",
-  #   sas=CWD / "example files" / "searchresults.csv",
-  # )
+  test_job = BalanceSheetJob()
 
-  # BalanceSheetJob.assemble_report(test_files)
+  # result = test_job._test_download("sas")
 
-  # Third party imports
-  from apscheduler.triggers.date import DateTrigger
-
-  # First party imports
-  from scheduler_config import Scheduler
-
-  test_job = BalanceSheetJob(
-    Scheduler(),
-    "test_timeclock_job",
-    DateTrigger(run_date=datetime.now(tz=SETTINGS.tz)),
+  test_job._test_assemble_report(
+    DownloadedFiles(
+      ryo=CWD / "file_holding" / "balancesheetjob" / "ryo" / "SFT - RYO ACH Drafts(1).csv",
+      sas=CWD / "file_holding" / "balancesheetjob" / "sas" / "Sweet_Fire_2026-06-17T03_31_24.476.csv",
+    )
   )
+  report_path = CWD / "file_holding" / "balancesheetjob" / "output" / "sas_ryo_balance_sheet_20260617093924911622.csv"
 
-  result = test_job.test_download("sas")
+  test_job.email_report(report_path)
