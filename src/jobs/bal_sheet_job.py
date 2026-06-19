@@ -377,7 +377,6 @@ class BalanceSheetJob(JobBase):
     msg["Subject"] = f"SAS/RYO Balance Sheet Report - {report_path.stem}"
     msg["From"] = SETTINGS.alerts_email
     msg["To"] = ", ".join(self.email_recipients)
-    msg[""]
 
     ctx = create_default_context()
 

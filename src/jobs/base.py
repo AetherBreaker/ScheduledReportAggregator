@@ -101,9 +101,8 @@ class JobBase(metaclass=SingletonTypeABC):
   reschedule_delay_minutes: ClassVar[int] = 10  # minutes to delay when rescheduling after an error
 
   reports_pickup_base_folder = PurePosixPath("/upload")
-  report_path_subfolder: str = ""
 
-  reports_pickup_folder: PurePosixPath = reports_pickup_base_folder / report_path_subfolder
+  reports_pickup_folder: PurePosixPath
 
   jobs_register: dict[JobIDSuffix, tuple[Callable[..., Any], CronArgs | SubJobTriggerArgs]]
   extra_jobs_register: dict[JobIDSuffix, tuple[Callable[..., Any], SubJobTriggerArgs]]

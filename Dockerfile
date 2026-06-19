@@ -44,6 +44,9 @@ COPY --from=builder /app/.venv /app/.venv
 # Copy the source code into the container.
 COPY --chown=nonroot:nonroot ./src ./src
 
+# Ensure the non-root user owns all the contents of the secrets folder
+RUN chown -R 999:999 /app/persisted_data
+
 # Set PYTHONPATH so imports work correctly
 ENV PYTHONPATH=/app/src
 

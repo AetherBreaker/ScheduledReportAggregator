@@ -1,20 +1,30 @@
+if __name__ == "__main__":
+  # First party imports
+  from sft_ext.logging.init_logging import init_logging
+
+  init_logging()
+
 # Standard library imports
 from atexit import register
 from datetime import date
 from decimal import Decimal
+from email.message import EmailMessage
 from json import load
 from logging import getLogger
+from mimetypes import guess_type
 from pathlib import Path
+from smtplib import SMTP
+from ssl import create_default_context
 from subprocess import run
 from sys import executable
-from typing import TYPE_CHECKING, NamedTuple, TypedDict
+from typing import TYPE_CHECKING, NamedTuple
 
 # Third party imports
 from google.oauth2.service_account import Credentials
 from gspread.auth import authorize
 from gspread.http_client import BackOffHTTPClient
 from gspread.utils import DateTimeOption, Dimension, ValueRenderOption
-from pandas import notna, read_csv, to_numeric
+from pandas import notna, read_csv
 
 # First party imports
 from environment_init_vars import CWD, SETTINGS
@@ -76,10 +86,14 @@ class ManifestEntry(NamedTuple):
   pdf: Path
 
 
-class OverUnderEntry(TypedDict):
-  alloted_hours: Decimal
+class OverUnderEntry(NamedTuple):
+  store: StoreNum
+  week_ending: date
+  alloted_hours: int
+  worked_hours: Decimal
   over_under_hours: Decimal  # positive for over, negative for under
   pdf_path: Path
+  csv_path: Path
 
 
 DEFAULT_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -90,6 +104,14 @@ class TimeclockJob(JobBase):
 
   sheet_tab_store_range = "'Sheet1'!R2C1:C1"
   sheet_tab_allotted_hours_range = "'Sheet1'!R2C3:C3"
+
+  email_recipients = (
+    # "denirosaco@sweetfiretobacco.com",
+    "jacob.ogden@sweetfiretobacco.com",
+    # "franksaco@sweetfiretobacco.com",
+    # "spt@sweetfiretobacco.com",
+    # "pauline@sweetfiretobacco.com",
+  )
 
   def __post_init__(self) -> None:
     self.output_folder = self.job_holding_folder / "output"
@@ -123,6 +145,8 @@ class TimeclockJob(JobBase):
     self.schedule_local_holding = self.job_holding_folder / "schedule_reports"
     self.schedule_local_holding.mkdir(exist_ok=True)
 
+    self.reports_pickup_folder = self.reports_pickup_base_folder / "Automated Schedule Report"
+
   @property
   def client(self) -> Client:
     return authorize(self.creds, http_client=BackOffHTTPClient)
@@ -133,9 +157,7 @@ class TimeclockJob(JobBase):
 
     overunder_data = self.calculate_overunder_hours(manifest_data)
 
-    await self.send_results(overunder_data)
-
-  report_path_subfolder: str = "Automated Schedule Report"
+    self.send_results(overunder_data)
 
   async def get_next_timeclock_report(self) -> Path:
     with self.ftp_handlers["sft"].start_session() as ftp:
@@ -148,7 +170,7 @@ class TimeclockJob(JobBase):
           "Error in locating timeclock schedule report", reason=f"No schedule files in {self.reports_pickup_folder}", count_error=False
         ) from None
 
-      if self.check_if_this_week(youngest_file.modified_time):
+      if self.check_if_this_week(youngest_file.modified_time.astimezone(SETTINGS.tz)):
         remote_file = self.reports_pickup_folder / youngest_file.filename
         local_file = self.schedule_local_holding / youngest_file.filename
 
@@ -208,13 +230,13 @@ class TimeclockJob(JobBase):
 
     with manifest_path.open("r") as f:
       for store, weeks in load(f).items():
-        manifest_data[store] = {
+        manifest_data[int(store)] = {
           date.fromisoformat(week): ManifestEntry(csv=Path(entry["csv"]), pdf=Path(entry["pdf"])) for week, entry in weeks.items()
         }
 
     return manifest_data
 
-  def get_allotted_hours(self) -> dict[StoreNum, Decimal]:
+  def get_allotted_hours(self) -> dict[StoreNum, int]:
     result = self.client.http_client.values_batch_get(
       id=SETTINGS.allotted_hours_sheet_id,
       ranges=[self.sheet_tab_store_range, self.sheet_tab_allotted_hours_range],
@@ -234,10 +256,8 @@ class TimeclockJob(JobBase):
       allotted_hours[validated_row.store] = validated_row.allotted_hours
     return allotted_hours
 
-  def calculate_overunder_hours(
-    self, weeks_data: dict[StoreNum, dict[date, ManifestEntry]]
-  ) -> dict[StoreNum, dict[date, OverUnderEntry]]:
-    overunder_data: dict[StoreNum, dict[date, OverUnderEntry]] = {}
+  def calculate_overunder_hours(self, weeks_data: dict[StoreNum, dict[date, ManifestEntry]]) -> set[OverUnderEntry]:
+    overunder_data: set[OverUnderEntry] = set()
 
     allotted_hours = self.get_allotted_hours()
 
@@ -254,6 +274,8 @@ class TimeclockJob(JobBase):
     )["Group"].to_dict()
 
     for store, weeks in weeks_data.items():
+      store_allotted_hours = allotted_hours.get(store, 0)
+
       for week, (week_csv, week_pdf) in weeks.items():
         week_df = read_csv(
           week_csv,
@@ -275,21 +297,108 @@ class TimeclockJob(JobBase):
         week_df.loc[:, "group"] = week_df["employee_id"].map(employee_groups)
 
         # map week_df "Hours Worked" to Decimal, treating non-convertible values as 0
-        week_df.loc[:, "Hours Worked"] = to_numeric(week_df["Hours Worked"], errors="coerce").map(
-          lambda x: Decimal(x) if notna(x) else Decimal(0)
-        )
+        week_df["Hours Worked"] = week_df["Hours Worked"].map(lambda x: Decimal(x) if notna(x) else Decimal(0))
 
-        overunder_data.setdefault(store, {})[week] = OverUnderEntry(
-          alloted_hours=allotted_hours.get(store, Decimal(0)),
-          over_under_hours=week_df.loc[:, "Hours Worked"].sum() - allotted_hours.get(store, 0),
-          pdf_path=week_pdf,
+        week_worked_hours = week_df["Hours Worked"].sum()
+
+        overunder_data.add(
+          OverUnderEntry(
+            store=store,
+            week_ending=week,
+            alloted_hours=store_allotted_hours,
+            worked_hours=week_worked_hours,
+            over_under_hours=week_worked_hours - store_allotted_hours,
+            pdf_path=week_pdf,
+            csv_path=week_csv,
+          )
         )
 
     return overunder_data
 
-  async def send_results(self, overunder_data: dict[StoreNum, dict[date, OverUnderEntry]]):
-    # TODO
-    ...
+  MAX_ALLOWED_OVER_HOURS = Decimal("0.5")
+  MAX_ALLOWED_UNDER_HOURS = Decimal("-10")
+
+  def send_results(self, overunder_data: set[OverUnderEntry]):
+    emails_to_send = []
+
+    iterator = sorted(
+      overunder_data,
+      key=lambda x: x.over_under_hours,
+    )
+
+    for store, week_ending, allotted_hours, worked_hours, over_under_hours, pdf_path, csv_path in iterator:
+      if self.MAX_ALLOWED_OVER_HOURS >= over_under_hours >= self.MAX_ALLOWED_UNDER_HOURS:
+        continue
+
+      emails_to_send.append(
+        self.prepare_email_message(
+          storenum=store,
+          week_ending=week_ending,
+          allotted_hours=allotted_hours,
+          worked_hours=worked_hours,
+          over_under_hours=over_under_hours,
+          attachments=[pdf_path, csv_path],
+        )
+      )
+
+    if emails_to_send:
+      self.batch_send_emails(emails_to_send)
+
+  def prepare_email_message(
+    self,
+    storenum: StoreNum,
+    week_ending: date,
+    allotted_hours: int,
+    worked_hours: Decimal,
+    over_under_hours: Decimal,
+    attachments: list[Path],
+  ) -> EmailMessage:
+    over_under_str = "Over" if over_under_hours > 0 else "Under"
+    message = (
+      f"Store {storenum} is {over_under_str} allotted hours for the week ending {week_ending.isoformat()}.\n"
+      f"  Allotted Hours: {allotted_hours}\n"
+      f"  Worked Hours: {worked_hours}\n"
+      f"  {over_under_str} Hours: {abs(over_under_hours)}\n"
+    )
+
+    msg = EmailMessage()
+    msg.set_content(message)
+    msg["Subject"] = (
+      f"SFT{storenum:0>3} - Store {over_under_str} Allotted Hours by {abs(over_under_hours)} for Week Ending {week_ending.isoformat()}"
+    )
+    msg["From"] = SETTINGS.alerts_email
+    msg["To"] = ", ".join(self.email_recipients)
+
+    for attachment in attachments:
+      # attachment could be either pdf or csv, determine maintype and subtype based on suffix
+      ctype, encoding = guess_type(attachment.name)
+      if ctype is None or encoding is not None:
+        # Fallback to a generic binary stream if type is unknown
+        ctype = "application/octet-stream"
+
+      maintype, subtype = ctype.split("/", 1)
+
+      msg.add_attachment(
+        attachment.read_bytes(),
+        maintype=maintype,
+        subtype=subtype,
+        filename=attachment.name,
+      )
+
+    return msg
+
+  def batch_send_emails(self, messages: list[EmailMessage]) -> None:
+    ctx = create_default_context()
+
+    with SMTP(SETTINGS.alerts_smtp_server, SETTINGS.alerts_smtp_port) as smtp:
+      smtp.ehlo()
+      smtp.starttls(context=ctx)
+      smtp.ehlo()
+      smtp.login(SETTINGS.alerts_email, SETTINGS.alerts_email_pwd)
+
+      for msg in messages:
+        smtp.send_message(msg)
+        logger.info(f"Email sent with subject '{msg['Subject']}' to {msg['To']}")
 
   @staticmethod
   def _debug_get_fixed_timeclock_src() -> Path:
@@ -327,6 +436,8 @@ class TimeclockJob(JobBase):
 
 
 if __name__ == "__main__":
+  # Third party imports
+  import winloop as asyncio
   # csv_file = CWD / "Time-Clock-Entry-Report_2026-05-14_19-31-12.csv"
 
   # TimeclockJob().run_processor(csv_file)
@@ -334,4 +445,7 @@ if __name__ == "__main__":
   job = TimeclockJob()
 
   result = job.calculate_overunder_hours(job.load_manifest(CWD / "manifest.json"))
+  job.send_results(result)
+
+  # asyncio.run(job.main_job())
   pass
