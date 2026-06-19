@@ -444,8 +444,8 @@ if __name__ == "__main__":
 
   job = TimeclockJob()
 
-  result = job.calculate_overunder_hours(job.load_manifest(CWD / "manifest.json"))
-  job.send_results(result)
+  # result = job.calculate_overunder_hours(job.load_manifest(CWD / "manifest.json"))
+  # job.send_results(result)
 
-  # asyncio.run(job.main_job())
+  asyncio.run(job.main_job())
   pass
