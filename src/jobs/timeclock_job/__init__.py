@@ -322,12 +322,10 @@ class TimeclockJob(JobBase):
   def send_results(self, overunder_data: set[OverUnderEntry]):
     emails_to_send = []
 
-    iterator = sorted(
+    for store, week_ending, allotted_hours, worked_hours, over_under_hours, pdf_path, csv_path in sorted(
       overunder_data,
       key=lambda x: x.over_under_hours,
-    )
-
-    for store, week_ending, allotted_hours, worked_hours, over_under_hours, pdf_path, csv_path in iterator:
+    ):
       if self.MAX_ALLOWED_OVER_HOURS >= over_under_hours >= self.MAX_ALLOWED_UNDER_HOURS:
         continue
 
@@ -365,7 +363,7 @@ class TimeclockJob(JobBase):
     msg = EmailMessage()
     msg.set_content(message)
     msg["Subject"] = (
-      f"SFT{storenum:0>3} - Store {over_under_str} Allotted Hours by {abs(over_under_hours)} for Week Ending {week_ending.isoformat()}"
+      f"SFT{storenum:0>3} - Store {over_under_str} Allotted Hours by {abs(over_under_hours): >5} for Week Ending {week_ending.isoformat()}"
     )
     msg["From"] = SETTINGS.alerts_email
     msg["To"] = ", ".join(self.email_recipients)
