@@ -810,12 +810,11 @@ wheels = [
 
 [[package]]
 name = "scheduledreportaggregator"
-version = "0.1.0"
+version = "1.0.0"
 source = { virtual = "." }
 dependencies = [
     { name = "aiologic", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "apscheduler", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-    { name = "google-auth", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "gspread", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "pandas", extra = ["performance"], marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "paramiko", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
@@ -840,7 +839,6 @@ dev = [
 requires-dist = [
     { name = "aiologic", specifier = ">=0.16.0" },
     { name = "apscheduler", specifier = ">=3.11.2" },
-    { name = "google-auth", specifier = ">=2.55.0" },
     { name = "gspread", specifier = ">=6.2.1" },
     { name = "pandas", extras = ["performance"], specifier = ">=3.0.3" },
     { name = "paramiko", specifier = ">=5.0.0" },
