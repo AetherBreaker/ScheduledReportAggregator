@@ -71,7 +71,7 @@ scheduler = Scheduler.init_scheduler()
 
 
 jobs: tuple[tuple[type[JobBase], CronArgs], ...] = (
-  # (TimeclockJob, CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=9, minute=0, second=0)),
+  (TimeclockJob, CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=9, minute=0, second=0)),
   (BalanceSheetJob, CronArgs(day_of_week=DayOfWeek.WEDNESDAY, hour=7, minute=0, second=0)),
 )
 
@@ -132,8 +132,9 @@ async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
 
   scheduler.print_jobs()
 
-  if __debug__:
-    # force run immediately for testing
+  if __debug__ or True:
+    for job_cls, _ in jobs:
+      await job_cls().main_job()  # Run each job once immediately in debug mode for testing
     pass
 
   RICH_CONSOLE.rule("[bold red]Boot Done[/]", style="bold red")
