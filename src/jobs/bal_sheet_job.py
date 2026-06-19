@@ -17,8 +17,8 @@ from dateutil.rrule import DAILY, rrule
 from pandas import concat, isna, read_csv, to_numeric
 
 # First party imports
-from environment_init_vars import CWD, SETTINGS
-from jobs import CanRescheduleJobError, JobBase
+from environment_init_vars import SETTINGS
+from jobs.base import HOLDING_FOLDER, CanRescheduleJobError, JobBase
 from sft_ext.utils import today
 
 if TYPE_CHECKING:
@@ -29,6 +29,9 @@ if TYPE_CHECKING:
   from typing import Literal
 
 logger = getLogger(__name__)
+
+
+__all__ = ["BalanceSheetJob"]
 
 
 @dataclass
@@ -195,12 +198,12 @@ class BalanceSheetJob(JobBase):
   def __post_init__(self) -> None:
     self.file_details = {
       "ryo": FileVars(
-        pickup_folder=PurePosixPath("/SFTAccounting/"),
+        pickup_folder=PurePosixPath("/Accounting"),
         filename_pattern_factory=assemble_ryo_filename_pattern,
         local_holding_folder=self.job_holding_folder / "ryo",
       ),
       "sas": FileVars(
-        pickup_folder=PurePosixPath("/Outgoing/ach_detail/"),
+        pickup_folder=PurePosixPath("/Outgoing/ach_detail"),
         filename_pattern_factory=assemble_sas_filename_pattern,
         local_holding_folder=self.job_holding_folder / "sas",
       ),
@@ -209,7 +212,7 @@ class BalanceSheetJob(JobBase):
     self.job_output_folder.mkdir(parents=True, exist_ok=True)
 
   async def main_job(self) -> None:
-    downloaded_files = self.download_files()
+    downloaded_files = self.download_all_files()
 
     try:
       report_path = self.assemble_report(downloaded_files)
@@ -226,33 +229,42 @@ class BalanceSheetJob(JobBase):
       logger.exception(f"{self.__class__.__name__}: Error emailing report:", exc_info=e)
       raise CanRescheduleJobError("error in emailing report", count_error=True) from e
 
-  def download_files(self) -> DownloadedFiles:
+  def download_file(self, ftp_key: str) -> Path:
+    file_vars = self.file_details[ftp_key]
+    with self.ftp_handlers[ftp_key].start_session() as conn:
+      files = conn.listdir(file_vars.pickup_folder.as_posix())
+      pattern = file_vars.filename_pattern_factory(today())
+
+      filtered_files = filter(lambda f: pattern.match(f.filename), files)
+
+      # check that filtered_files is not empty before calling max, otherwise it will raise a ValueError
+      try:
+        youngest_file = max(filtered_files, key=lambda f: f.modified_time)
+      except ValueError:
+        logger.warning(f"No matching files found in {file_vars} for FTP {ftp_key}")
+        raise CanRescheduleJobError(
+          f"Error in downloading file: missing {ftp_key} file", reason=f"missing {ftp_key} file", count_error=False
+        ) from None
+
+      remote_file = file_vars.pickup_folder / youngest_file.filename
+      local_file = file_vars.local_holding_folder / youngest_file.filename
+      with local_file.open("wb") as file:
+        conn.download_file(remote_path=remote_file.as_posix(), callback=file.write)
+
+    return local_file
+
+  def download_all_files(self) -> DownloadedFiles:
     downloaded_files: dict[str, Path] = {}
     with self.jobname_cvar.set(self.__class__.__name__):
-      for ftp_key, file_vars in self.file_details.items():
-        with self.ftp_handlers[ftp_key].start_session() as conn:
-          files = conn.listdir(file_vars.pickup_folder.as_posix())
-          pattern = file_vars.filename_pattern_factory(today())
+      for ftp_key in self.file_details.keys():
+        try:
+          local_file = self.download_file(ftp_key)
+        except Exception as e:
+          for file in downloaded_files.values():
+            file.unlink(missing_ok=True)
+          raise e
 
-          filtered_files = filter(lambda f: pattern.match(f.filename), files)
-
-          # check that filtered_files is not empty before calling max, otherwise it will raise a ValueError
-          try:
-            youngest_file = max(filtered_files, key=lambda f: f.modified_time)
-          except ValueError:
-            logger.warning(f"No matching files found in {file_vars} for FTP {ftp_key}")
-            for file in downloaded_files.values():
-              file.unlink(missing_ok=True)
-            raise CanRescheduleJobError(
-              f"Error in downloading files: missing {ftp_key} file", reason=f"missing {ftp_key} file", count_error=False
-            ) from None
-
-          remote_file = file_vars.pickup_folder / youngest_file.filename
-          local_file = file_vars.local_holding_folder / youngest_file.filename
-          with local_file.open("wb") as file:
-            conn.download_file(remote_path=remote_file.as_posix(), callback=file.write)
-
-          downloaded_files[ftp_key] = local_file
+        downloaded_files[ftp_key] = local_file
 
     return DownloadedFiles(**downloaded_files)
 
@@ -328,9 +340,10 @@ class BalanceSheetJob(JobBase):
 
     # join sas_total to ryo_df on storenum
     merged_df = ryo_df.merge(sas_grouped, on="storenum", how="outer")
+    # merged_df.to_csv("test_merged.csv", header=True, index=True)
     merged_df = merged_df[
       [
-        "store",
+        # "store",
         "storenum",
         "ryo_total",
         "sas_total",
@@ -384,43 +397,35 @@ class BalanceSheetJob(JobBase):
     logger.info(f"Email sent with report {report_path.name} to {self.email_recipients}")
 
   def _test_download(self, ftp_key: Literal["ryo", "sas"]) -> Path | None:
-    file_vars = self.file_details[ftp_key]
-    with self.ftp_handlers[ftp_key].start_session() as conn:
-      files = list(conn.listdir(file_vars.pickup_folder.as_posix()))
-      pattern = file_vars.filename_pattern_factory(today())
-
-      filtered_files = list(filter(lambda f: pattern.match(f.filename), files))
-
-      for file in filtered_files:
-        logger.info(f"Matched file: {file.filename} with modified time {file.modified_time}")
-
-      # check that filtered_files is not empty before calling max, otherwise it will raise a ValueError
-      try:
-        youngest_file = max(filtered_files, key=lambda f: f.modified_time)
-      except ValueError:
-        logger.warning(f"No matching files found in {file_vars} for FTP {ftp_key}")
-        return
-
-      remote_file = file_vars.pickup_folder / youngest_file.filename
-      local_file = file_vars.local_holding_folder / youngest_file.filename
-      with local_file.open("wb") as file:
-        conn.download_file(remote_path=remote_file.as_posix(), callback=file.write)
+    self.download_file(ftp_key)
 
   def _test_assemble_report(self, downloaded_files: DownloadedFiles) -> Path:
     return self.assemble_report(downloaded_files)
+
+  def _test_job_no_send(self) -> None:
+    downloaded_files = self.download_all_files()
+
+    try:
+      report_path = self.assemble_report(downloaded_files)  # noqa: F841
+    except Exception as e:
+      logger.exception(f"{self.__class__.__name__}: Error assembling report:", exc_info=e)
+      raise CanRescheduleJobError(
+        "error in report assembly",
+        count_error=True,
+      ) from e
 
 
 if __name__ == "__main__":
   test_job = BalanceSheetJob()
 
-  # result = test_job._test_download("sas")
+  # result = test_job._test_download("ryo")
 
   test_job._test_assemble_report(
     DownloadedFiles(
-      ryo=CWD / "file_holding" / "balancesheetjob" / "ryo" / "SFT - RYO ACH Drafts(1).csv",
-      sas=CWD / "file_holding" / "balancesheetjob" / "sas" / "Sweet_Fire_2026-06-17T03_31_24.476.csv",
+      ryo=HOLDING_FOLDER / "balancesheetjob" / "ryo" / "RYO_ACH_Drafts_20260618164600000000.csv",
+      sas=HOLDING_FOLDER / "balancesheetjob" / "sas" / "Sweet_Fire_2026-06-17T03_31_24.476.csv",
     )
   )
-  report_path = CWD / "file_holding" / "balancesheetjob" / "output" / "sas_ryo_balance_sheet_20260617093924911622.csv"
+  # report_path = CWD / "file_holding" / "balancesheetjob" / "output" / "sas_ryo_balance_sheet_20260617093924911622.csv"
 
-  test_job.email_report(report_path)
+  # test_job.email_report(report_path)

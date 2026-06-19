@@ -2,13 +2,14 @@
   dependencies = [
     "aiologic>=0.16.0",
     "apscheduler>=3.11.2",
+    "gspread>=6.2.1",
     "pandas[performance]>=3.0.3",
     "paramiko>=5.0.0",
     "pydantic-settings>=2.14.1",
     "python-dateutil>=2.9.0.post0",
     "rich>=15.0.0",
     "sft-ext[sftp]==0.7.1",
-    "timeclock-entry-processor>=1.2.6",
+    "timeclock-entry-processor>=1.4.1",
   ]
   description = "Add your description here"
   name = "scheduledreportaggregator"
@@ -29,7 +30,7 @@
       { path = "D:\\SFT Software Projects\\sft_ext", editable = true, marker = "sys_platform == 'win32'" },
     ]
     timeclock-entry-processor = [
-      { git = "https://github.com/AetherBreaker/timeclock_entry_processor", marker = "sys_platform == 'linux'", tag = "v1.2.6" },
+      { git = "https://github.com/AetherBreaker/timeclock_entry_processor", marker = "sys_platform == 'linux'", tag = "v1.4.1" },
       { path = "D:\\SFT Software Projects\\timeclock_entry_processor", editable = true, marker = "sys_platform == 'win32'" },
     ]
 

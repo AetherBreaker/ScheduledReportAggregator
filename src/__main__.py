@@ -36,8 +36,7 @@ from apscheduler.triggers.cron import CronTrigger
 # First party imports
 from custom_types import CronArgs, DayOfWeek
 from environment_init_vars import SETTINGS
-from jobs.bal_sheet_job import BalanceSheetJob
-from jobs.timeclock_job import TimeclockJob
+from jobs import HOLDING_FOLDER, BalanceSheetJob, TimeclockJob
 from scheduler_config import Scheduler
 from sft_ext.errors.err_handling import FATAL_EVENT
 
@@ -46,7 +45,7 @@ if TYPE_CHECKING:
   from typing import NoReturn
 
   # First party imports
-  from jobs import JobBase
+  from jobs.base import JobBase
 
 
 logger = getLogger(__name__)
@@ -72,7 +71,7 @@ scheduler = Scheduler.init_scheduler()
 
 
 jobs: tuple[tuple[type[JobBase], CronArgs], ...] = (
-  (TimeclockJob, CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=9, minute=0, second=0)),
+  # (TimeclockJob, CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=9, minute=0, second=0)),
   (BalanceSheetJob, CronArgs(day_of_week=DayOfWeek.WEDNESDAY, hour=9, minute=0, second=0)),
 )
 
@@ -94,6 +93,7 @@ async def reschedule_jobs() -> None:
 
 
 async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
+  HOLDING_FOLDER.mkdir(exist_ok=True)
   RICH_CONSOLE.rule("[bold red]Booting...[/]", style="bold red")
   # scheduler.add_job(
   #   scheduler.print_jobs,

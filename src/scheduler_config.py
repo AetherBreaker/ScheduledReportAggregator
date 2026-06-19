@@ -31,6 +31,8 @@ if TYPE_CHECKING:
 
 logger = getLogger(__name__)
 
+__all__ = ["Scheduler"]
+
 DO_NOT_LOG_PATTERNS = [
   compile(r".*?_register_dropoff_.*"),
   compile(r"submit_queued_writes_to_pool"),

@@ -12,12 +12,10 @@ if os.name != "nt" and hasattr(os, "geteuid") and os.geteuid() == 0:
   logger.warning("Process is running as root on a Unix system. This is not recommended for production.")
 
 
+__all__ = ["CWD", "SETTINGS"]
+
 # Settings
 SETTINGS = Settings()  # type: ignore
 
 # Folder paths
 CWD = Path.cwd()
-
-
-HOLDING_FOLDER = CWD / "file_holding"
-HOLDING_FOLDER.mkdir(exist_ok=True)

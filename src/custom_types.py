@@ -1,8 +1,8 @@
 # Standard library imports
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, NamedTuple, TypedDict
 
 # First party imports
-from jobs import DEFAULT_USE_ARGS, UseArgs
 from sft_ext.types import StrEnum
 
 if TYPE_CHECKING:
@@ -15,14 +15,17 @@ if TYPE_CHECKING:
   from dateutil.relativedelta import relativedelta
 
 
-class DayOfWeek(StrEnum):
-  SUNDAY = "sun"
-  MONDAY = "mon"
-  TUESDAY = "tue"
-  WEDNESDAY = "wed"
-  THURSDAY = "thu"
-  FRIDAY = "fri"
-  SATURDAY = "sat"
+__all__ = [
+  "DEFAULT_USE_ARGS",
+  "CronArgs",
+  "DayOfWeek",
+  "JobID",
+  "JobIDPrefix",
+  "JobIDSuffix",
+  "StoreNum",
+  "SubJobTriggerArgs",
+  "UseArgs",
+]
 
 
 class CronArgs(TypedDict):
@@ -36,6 +39,30 @@ class CronArgs(TypedDict):
   timezone: NotRequired[ZoneInfo | timezone | None]
 
 
+class DayOfWeek(StrEnum):
+  SUNDAY = "sun"
+  MONDAY = "mon"
+  TUESDAY = "tue"
+  WEDNESDAY = "wed"
+  THURSDAY = "thu"
+  FRIDAY = "fri"
+  SATURDAY = "sat"
+
+
+@dataclass
+class UseArgs:
+  year: bool = False
+  month: bool = False
+  day: bool = False
+  day_of_week: bool = True
+  hour: bool = True
+  minute: bool = True
+  second: bool = False
+
+
+DEFAULT_USE_ARGS = UseArgs()
+
+
 class SubJobTriggerArgs(NamedTuple):
   delta: timedelta | relativedelta
   use_args: UseArgs = DEFAULT_USE_ARGS
@@ -44,3 +71,4 @@ class SubJobTriggerArgs(NamedTuple):
 type JobID = str
 type JobIDSuffix = JobID
 type JobIDPrefix = JobID
+type StoreNum = int

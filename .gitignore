@@ -243,3 +243,5 @@ PYCACHE/
 *.csv
 *.ttf
 timeclock_playground/
+/manifest.json
+*.json
