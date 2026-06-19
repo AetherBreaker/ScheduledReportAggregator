@@ -107,10 +107,11 @@ class TimeclockJob(JobBase):
 
   email_recipients = (
     # "denirosaco@sweetfiretobacco.com",
-    "jacob.ogden@sweetfiretobacco.com",
+    # "jacob.ogden@sweetfiretobacco.com",
     # "franksaco@sweetfiretobacco.com",
     # "spt@sweetfiretobacco.com",
     # "pauline@sweetfiretobacco.com",
+    "timeclockhoursreports@sweetfiretobacco.com",
   )
 
   def __post_init__(self) -> None:

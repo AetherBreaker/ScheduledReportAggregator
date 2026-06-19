@@ -132,9 +132,9 @@ async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
 
   scheduler.print_jobs()
 
-  if __debug__ or True:
-    for job_cls, _ in jobs:
-      await job_cls().main_job()  # Run each job once immediately in debug mode for testing
+  if __debug__:
+    # for job_cls, _ in jobs:
+    #   await job_cls().main_job()  # Run each job once immediately in debug mode for testing
     pass
 
   RICH_CONSOLE.rule("[bold red]Boot Done[/]", style="bold red")

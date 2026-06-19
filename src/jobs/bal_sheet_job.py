@@ -191,7 +191,7 @@ class DownloadedFiles(TypedDict):
 class BalanceSheetJob(JobBase):
   reschedule_delay_minutes: ClassVar[int] = 10
   email_recipients = (
-    # "denirosaco@sweetfiretobacco.com",
+    "denirosaco@sweetfiretobacco.com",
     "jacob.ogden@sweetfiretobacco.com",
   )
 
