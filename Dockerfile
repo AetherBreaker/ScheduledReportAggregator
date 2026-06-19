@@ -1,13 +1,8 @@
 # syntax=docker/dockerfile:1
 
-# Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim
+# ---- Builder stage ----
+FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim AS builder
 
-# Setup a non-root user
-RUN groupadd --system --gid 999 nonroot \
-  && useradd --system --gid 999 --uid 999 --create-home nonroot
-
-# Install the project into `/app`
 WORKDIR /app
 
 # Enable bytecode compilation
@@ -16,8 +11,24 @@ ENV UV_COMPILE_BYTECODE=1
 # Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy
 
-# Ensure installed tools can be executed out of the box
-ENV UV_TOOL_BIN_DIR=/usr/local/bin
+# Install git (required for uv to fetch git-based dependencies)
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install the project's dependencies using the lockfile and settings
+RUN --mount=type=cache,target=/root/.cache/uv \
+  --mount=type=bind,source=uv.lock,target=uv.lock \
+  --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+  uv sync --frozen --no-install-project
+
+# ---- Final stage ----
+FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim
+
+# Setup a non-root user
+RUN groupadd --system --gid 999 nonroot \
+  && useradd --system --gid 999 --uid 999 --create-home nonroot
+
+WORKDIR /app
 
 # Prevents Python from writing pyc files.
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -27,15 +38,8 @@ ENV PYTHONUNBUFFERED=1
 # Enable Python optimizations (removes assert statements and sets __debug__ to False)
 ENV PYTHONOPTIMIZE=1
 
-# Install the project's dependencies using the lockfile and settings
-RUN --mount=type=cache,target=/root/.cache/uv \
-  --mount=type=bind,source=uv.lock,target=uv.lock \
-  --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-  uv sync --locked --no-install-project
-
-# Create directories for runtime data with proper permissions
-RUN mkdir -p /app/src/logs \
-  && chown -R nonroot:nonroot /app/src/logs
+# Copy the virtual environment from the builder stage
+COPY --from=builder /app/.venv /app/.venv
 
 # Copy the source code into the container.
 COPY --chown=nonroot:nonroot ./src ./src
