@@ -1,5 +1,10 @@
 [project]
-  dependencies = [
+  name            = "scheduledreportaggregator"
+  version         = "1.1.2"
+  description     = "Add your description here"
+  readme          = "README.md"
+  requires-python = ">=3.14"
+  dependencies    = [
     "aiologic>=0.16.0",
     "apscheduler>=3.11.2",
     "gspread>=6.2.1",
@@ -11,50 +16,6 @@
     "sft-ext[sftp]==0.7.1",
     "timeclock-entry-processor>=1.4.1",
   ]
-  description = "Add your description here"
-  name = "scheduledreportaggregator"
-  readme = "README.md"
-  requires-python = ">=3.14"
-  version = "1.1.2"
-
-
-[tool.uv]
-  environments = [
-    "sys_platform == 'linux'",
-    "sys_platform == 'win32'",
-  ]
-
-  [tool.uv.sources]
-    sft-ext = [
-      { git = "https://github.com/AetherBreaker/sft_ext", marker = "sys_platform == 'linux'", tag = "v0.7.1" },
-      { path = "D:\\SFT Software Projects\\sft_ext", editable = true, marker = "sys_platform == 'win32'" },
-    ]
-    timeclock-entry-processor = [
-      { git = "https://github.com/AetherBreaker/timeclock_entry_processor", marker = "sys_platform == 'linux'", tag = "v1.4.1" },
-      { path = "D:\\SFT Software Projects\\timeclock_entry_processor", editable = true, marker = "sys_platform == 'win32'" },
-    ]
-
-
-[tool.ruff]
-  extend = "../pyproject.toml"
-
-  src = [
-    "./src",
-  ]
-
-
-[tool.pyright]
-  extraPaths = [
-    "src",
-  ]
-  typeCheckingMode = "standard"
-
-  executionEnvironments = [
-    { root = "src", extraPaths = [
-      "src",
-    ] },
-  ]
-
 
 [dependency-groups]
   dev = [
@@ -63,3 +24,68 @@
     "pytest>=9.0.3",
     "types-python-dateutil>=2.9.0.20260518",
   ]
+
+[tool.pyright]
+  verboseOutput          = true
+  useLibraryCodeForTypes = true
+
+  enableReachabilityAnalysis  = true
+  analyzeUnannotatedFunctions = true
+  deprecateTypingAliases      = true
+
+  typeCheckingMode = "standard"
+
+  reportPropertyTypeMismatch          = true
+  reportMissingTypeStubs              = true
+  reportImportCycles                  = true
+  reportUntypedFunctionDecorator      = true
+  reportUntypedClassDecorator         = true
+  reportUntypedNamedTuple             = true
+  reportPrivateUsage                  = true
+  # reportConstantRedefinition          = true
+  reportDeprecated                    = true
+  reportMissingSuperCall              = true
+  reportUninitializedInstanceVariable = true
+  reportMissingParameterType          = true
+  reportMissingTypeArgument           = true
+  reportUnnecessaryIsInstance         = true
+  reportUnnecessaryCast               = true
+  reportUnnecessaryComparison         = true
+  reportUnnecessaryContains           = true
+  reportInvalidStubStatement          = true
+  reportUnnecessaryTypeIgnoreComment  = true
+  reportMatchNotExhaustive            = true
+  reportUnreachable                   = true
+  reportImplicitOverride              = true
+
+  executionEnvironments = [{ root = "src", extraPaths = ["src"] }]
+
+[tool.ruff]
+  extend = "../pyproject.toml"
+
+  src = ["./src"]
+
+[tool.tombi]
+  toml-version = "v1.1.0"
+
+  [tool.tombi.format.rules]
+    indent-sub-tables               = true
+    indent-table-key-value-pairs    = true
+    key-value-equals-sign-alignment = true
+    trailing-comment-alignment      = true
+
+[tool.uv]
+  environments = [
+    "sys_platform == 'linux'",
+    "sys_platform == 'win32'",
+  ]
+
+  [tool.uv.sources]
+    sft-ext                   = [
+      { git = "https://github.com/AetherBreaker/sft_ext", marker = "sys_platform == 'linux'", tag = "v0.7.1" },
+      { path = "D:\\SFT Software Projects\\sft_ext", editable = true, marker = "sys_platform == 'win32'" },
+    ]
+    timeclock-entry-processor = [
+      { git = "https://github.com/AetherBreaker/timeclock_entry_processor", marker = "sys_platform == 'linux'", tag = "v1.4.1" },
+      { path = "D:\\SFT Software Projects\\timeclock_entry_processor", editable = true, marker = "sys_platform == 'win32'" },
+    ]
