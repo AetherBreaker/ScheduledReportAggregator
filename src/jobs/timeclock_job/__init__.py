@@ -17,7 +17,7 @@ from smtplib import SMTP
 from ssl import create_default_context
 from subprocess import run
 from sys import executable
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple, override
 
 # Third party imports
 from google.oauth2.service_account import Credentials
@@ -152,6 +152,7 @@ class TimeclockJob(JobBase):
   def client(self) -> Client:
     return authorize(self.creds, http_client=BackOffHTTPClient)
 
+  @override
   async def main_job(self) -> None:
     next_report = await self.get_next_timeclock_report()
     manifest_data = self.run_processor(next_report)

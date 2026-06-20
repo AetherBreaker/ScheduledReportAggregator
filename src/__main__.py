@@ -155,8 +155,6 @@ async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
 
   sys.exit(1)
 
-  raise RuntimeError("How did we get here? The main function should never exit normally.")
-
 
 if __name__ == "__main__":
   run(main())

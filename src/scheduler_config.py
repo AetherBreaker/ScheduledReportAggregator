@@ -2,7 +2,7 @@
 from datetime import timedelta
 from logging import getLogger
 from re import compile
-from typing import TYPE_CHECKING, TextIO
+from typing import TYPE_CHECKING, Any, TextIO, override
 from zoneinfo import ZoneInfo
 
 # Third party imports
@@ -53,7 +53,7 @@ def run_job(job: Job, jobstore_alias: str, run_times: list[datetime], logger_nam
   for run_time in run_times:
     # See if the job missed its run time window, and handle
     # possible misfires accordingly
-    if job.misfire_grace_time is not None:
+    if job.misfire_grace_time is not None:  # pyright: ignore[reportUnnecessaryComparison]
       now = get_now(ZoneInfo("UTC"))
 
       difference = now - run_time
@@ -85,7 +85,7 @@ async def run_coroutine_job(job: Job, jobstore_alias: str, run_times: list[datet
   local_logger = getLogger(logger_name)
   for run_time in run_times:
     # See if the job missed its run time window, and handle possible misfires accordingly
-    if job.misfire_grace_time is not None:
+    if job.misfire_grace_time is not None:  # pyright: ignore[reportUnnecessaryComparison]
       now = get_now(ZoneInfo("UTC"))
 
       difference = now - run_time
@@ -116,9 +116,10 @@ exec_base.run_coroutine_job = run_coroutine_job
 
 
 class CustomAsyncIOExecutor(AsyncIOExecutor):
+  @override
   def _do_submit_job(self, job: Job, run_times: list[datetime]):
     @handle_fatal_exc_sync
-    def callback(f: Future):
+    def callback(f: Future[Any]):
       self._pending_futures.discard(f)
       # try:
       events = f.result()
@@ -165,6 +166,7 @@ class Scheduler(AsyncIOScheduler):
       timezone=SETTINGS.tz,
     )
 
+  @override
   def _real_add_job(self, job: Job, jobstore_alias: str, replace_existing: bool):
     """
     :param Job job: the job to add
@@ -205,6 +207,7 @@ class Scheduler(AsyncIOScheduler):
     if self.state == STATE_RUNNING:
       self.wakeup()
 
+  @override
   def print_jobs(self, jobstore: str | None = None, out: TextIO | None = None):
     """
     print_jobs(jobstore=None, out=sys.stdout)

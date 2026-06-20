@@ -117,7 +117,7 @@ class JobBase(metaclass=SingletonTypeABC):
   scheduler: Scheduler
   jobstore: str
 
-  def __init__(self):
+  def __init__(self):  # pyright: ignore[reportMissingSuperCall]
     self.active_jobs = {}  # track active jobs for cleanup if needed
     self.extra_jobs_register = {}
 
@@ -189,7 +189,7 @@ class JobBase(metaclass=SingletonTypeABC):
     """Wrapper for main_job to handle error state."""
 
     @wraps(func)
-    async def wrapper(*args, **kwargs) -> Return_T | None:
+    async def wrapper(*args: Params_T.args, **kwargs: Params_T.kwargs) -> Return_T | None:
       if self.errored:
         logger.error(f"{self.__class__.__name__}: Job is in errored state. Skipping execution.")
         return

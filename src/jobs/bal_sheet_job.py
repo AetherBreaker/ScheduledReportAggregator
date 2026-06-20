@@ -9,7 +9,7 @@ from pathlib import PurePosixPath
 from re import compile
 from smtplib import SMTP
 from ssl import create_default_context
-from typing import TYPE_CHECKING, ClassVar, TypedDict
+from typing import TYPE_CHECKING, ClassVar, TypedDict, override
 
 # Third party imports
 from dateutil.relativedelta import SA, SU, relativedelta
@@ -211,6 +211,7 @@ class BalanceSheetJob(JobBase):
     self.job_output_folder = self.job_holding_folder / "output"
     self.job_output_folder.mkdir(parents=True, exist_ok=True)
 
+  @override
   async def main_job(self) -> None:
     downloaded_files = self.download_all_files()
 
@@ -419,7 +420,7 @@ if __name__ == "__main__":
 
   # result = test_job._test_download("ryo")
 
-  test_job._test_assemble_report(
+  test_job._test_assemble_report(  # pyright: ignore[reportPrivateUsage]
     DownloadedFiles(
       ryo=HOLDING_FOLDER / "balancesheetjob" / "ryo" / "RYO_ACH_Drafts_20260618164600000000.csv",
       sas=HOLDING_FOLDER / "balancesheetjob" / "sas" / "Sweet_Fire_2026-06-17T03_31_24.476.csv",
