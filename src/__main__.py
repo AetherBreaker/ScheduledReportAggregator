@@ -12,7 +12,7 @@ if __name__ == "__main__":
     width=None if platform == "win32" else 165,
     log_time=platform == "win32",
   )
-  PROJECT_NAME = "IMAPReportCollector"
+  PROJECT_NAME = "ScheduledReportAggregator"
   LOGGING_TYPE = "daily"
 
   init_logging()
