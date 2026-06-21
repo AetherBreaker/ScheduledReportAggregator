@@ -119,6 +119,7 @@ class JobBase(metaclass=SingletonTypeABC):
 
   def __init__(self):  # pyright: ignore[reportMissingSuperCall]
     self.active_jobs = {}  # track active jobs for cleanup if needed
+    self.active_args = {}  # track active jobs' trigger args for rescheduling logic
     self.extra_jobs_register = {}
 
     self.job_holding_folder = HOLDING_FOLDER / self.__class__.__name__.lower()
