@@ -854,7 +854,7 @@ wheels = [
 
 [[package]]
 name = "scheduledreportaggregator"
-version = "1.1.6"
+version = "1.1.7"
 source = { virtual = "." }
 dependencies = [
     { name = "aiologic", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
@@ -868,7 +868,7 @@ dependencies = [
     { name = "sft-ext", version = "0.7.3", source = { git = "https://github.com/AetherBreaker/sft_ext?tag=v0.7.3#41a8c5bc7a4af210a30786d38cf2ff802437b150" }, extra = ["sftp"], marker = "sys_platform == 'linux'" },
     { name = "sft-ext", version = "0.7.3", source = { editable = "D:/SFT Software Projects/sft_ext" }, extra = ["sftp"], marker = "sys_platform == 'win32'" },
     { name = "timeclock-entry-processor", version = "1.5.1", source = { git = "https://github.com/AetherBreaker/timeclock_entry_processor?tag=v1.5.1#26eb10e515366a74ab74431f1ee43d0274fd0542" }, marker = "sys_platform == 'linux'" },
-    { name = "timeclock-entry-processor", version = "1.5.1", source = { editable = "D:/SFT Software Projects/timeclock_entry_processor" }, marker = "sys_platform == 'win32'" },
+    { name = "timeclock-entry-processor", version = "1.5.2", source = { editable = "D:/SFT Software Projects/timeclock_entry_processor" }, marker = "sys_platform == 'win32'" },
 ]
 
 [package.dev-dependencies]
@@ -893,7 +893,7 @@ requires-dist = [
     { name = "sft-ext", extras = ["sftp"], marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = "==0.7.3" },
     { name = "sft-ext", extras = ["sftp"], marker = "sys_platform == 'linux'", git = "https://github.com/AetherBreaker/sft_ext?tag=v0.7.3" },
     { name = "sft-ext", extras = ["sftp"], marker = "sys_platform == 'win32'", editable = "D:/SFT Software Projects/sft_ext" },
-    { name = "timeclock-entry-processor", marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = ">=1.5.1" },
+    { name = "timeclock-entry-processor", marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = ">=1.5.2" },
     { name = "timeclock-entry-processor", marker = "sys_platform == 'linux'", git = "https://github.com/AetherBreaker/timeclock_entry_processor?tag=v1.5.1" },
     { name = "timeclock-entry-processor", marker = "sys_platform == 'win32'", editable = "D:/SFT Software Projects/timeclock_entry_processor" },
 ]
@@ -1019,7 +1019,7 @@ dependencies = [
 
 [[package]]
 name = "timeclock-entry-processor"
-version = "1.5.1"
+version = "1.5.2"
 source = { editable = "D:/SFT Software Projects/timeclock_entry_processor" }
 resolution-markers = [
     "sys_platform == 'win32'",
