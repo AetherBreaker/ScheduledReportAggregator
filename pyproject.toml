@@ -1,6 +1,6 @@
 [project]
   name            = "scheduledreportaggregator"
-  version         = "1.1.7"
+  version         = "1.1.8"
   description     = "Add your description here"
   readme          = "README.md"
   requires-python = ">=3.14"
@@ -13,8 +13,8 @@
     "pydantic-settings>=2.14.1",
     "python-dateutil>=2.9.0.post0",
     "rich>=15.0.0",
-    "sft-ext[sftp]==0.7.3",
-    "timeclock-entry-processor>=1.5.2",
+    "sft-ext[sftp]==0.7.4",
+    "timeclock-entry-processor>=1.5.3",
   ]
 
 [dependency-groups]
@@ -56,10 +56,10 @@
 
   [tool.uv.sources]
     sft-ext                   = [
-      { git = "https://github.com/AetherBreaker/sft_ext", marker = "sys_platform == 'linux'", tag = "v0.7.3" },
+      { git = "https://github.com/AetherBreaker/sft_ext", marker = "sys_platform == 'linux'", tag = "v0.7.4" },
       { path = "D:\\SFT Software Projects\\sft_ext", editable = true, marker = "sys_platform == 'win32'" },
     ]
     timeclock-entry-processor = [
-      { git = "https://github.com/AetherBreaker/timeclock_entry_processor", marker = "sys_platform == 'linux'", tag = "v1.5.1" },
+      { git = "https://github.com/AetherBreaker/timeclock_entry_processor", marker = "sys_platform == 'linux'", tag = "v1.5.3" },
       { path = "D:\\SFT Software Projects\\timeclock_entry_processor", editable = true, marker = "sys_platform == 'win32'" },
     ]
