@@ -865,10 +865,10 @@ dependencies = [
     { name = "pydantic-settings", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "python-dateutil", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "rich", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-    { name = "sft-ext", version = "0.7.4", source = { git = "https://github.com/AetherBreaker/sft_ext?tag=v0.7.4#a876dd239afc78fa742bb0b06e97c25c39c13478" }, extra = ["sftp"], marker = "sys_platform == 'linux'" },
-    { name = "sft-ext", version = "0.7.4", source = { editable = "D:/SFT Software Projects/sft_ext" }, extra = ["sftp"], marker = "sys_platform == 'win32'" },
-    { name = "timeclock-entry-processor", version = "1.5.3", source = { git = "https://github.com/AetherBreaker/timeclock_entry_processor?tag=v1.5.3#1629d6e5f7274506983e82057efc2461b7d7a3e0" }, marker = "sys_platform == 'linux'" },
-    { name = "timeclock-entry-processor", version = "1.5.3", source = { editable = "D:/SFT Software Projects/timeclock_entry_processor" }, marker = "sys_platform == 'win32'" },
+    { name = "sft-ext", version = "0.8.0", source = { git = "https://github.com/AetherBreaker/sft_ext?tag=v0.8.0#26b58a7932b4e8116ed3d79232db05d4b0d8df7e" }, extra = ["sftp"], marker = "sys_platform == 'linux'" },
+    { name = "sft-ext", version = "0.8.0", source = { editable = "D:/SFT Software Projects/sft_ext" }, extra = ["sftp"], marker = "sys_platform == 'win32'" },
+    { name = "timeclock-entry-processor", version = "1.6.0", source = { git = "https://github.com/AetherBreaker/timeclock_entry_processor?tag=v1.6.0#748a2edee3eb54d9923a5e9c054ffc2dc1fb7194" }, marker = "sys_platform == 'linux'" },
+    { name = "timeclock-entry-processor", version = "1.6.0", source = { editable = "D:/SFT Software Projects/timeclock_entry_processor" }, marker = "sys_platform == 'win32'" },
 ]
 
 [package.dev-dependencies]
@@ -890,11 +890,11 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.14.1" },
     { name = "python-dateutil", specifier = ">=2.9.0.post0" },
     { name = "rich", specifier = ">=15.0.0" },
-    { name = "sft-ext", extras = ["sftp"], marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = "==0.7.4" },
-    { name = "sft-ext", extras = ["sftp"], marker = "sys_platform == 'linux'", git = "https://github.com/AetherBreaker/sft_ext?tag=v0.7.4" },
+    { name = "sft-ext", extras = ["sftp"], marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = "==0.8.0" },
+    { name = "sft-ext", extras = ["sftp"], marker = "sys_platform == 'linux'", git = "https://github.com/AetherBreaker/sft_ext?tag=v0.8.0" },
     { name = "sft-ext", extras = ["sftp"], marker = "sys_platform == 'win32'", editable = "D:/SFT Software Projects/sft_ext" },
-    { name = "timeclock-entry-processor", marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = ">=1.5.3" },
-    { name = "timeclock-entry-processor", marker = "sys_platform == 'linux'", git = "https://github.com/AetherBreaker/timeclock_entry_processor?tag=v1.5.3" },
+    { name = "timeclock-entry-processor", marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = ">=1.6.0" },
+    { name = "timeclock-entry-processor", marker = "sys_platform == 'linux'", git = "https://github.com/AetherBreaker/timeclock_entry_processor?tag=v1.6.0" },
     { name = "timeclock-entry-processor", marker = "sys_platform == 'win32'", editable = "D:/SFT Software Projects/timeclock_entry_processor" },
 ]
 
@@ -909,8 +909,8 @@ dev = [
 
 [[package]]
 name = "sft-ext"
-version = "0.7.4"
-source = { git = "https://github.com/AetherBreaker/sft_ext?tag=v0.7.4#a876dd239afc78fa742bb0b06e97c25c39c13478" }
+version = "0.8.0"
+source = { git = "https://github.com/AetherBreaker/sft_ext?tag=v0.8.0#26b58a7932b4e8116ed3d79232db05d4b0d8df7e" }
 resolution-markers = [
     "sys_platform == 'linux'",
 ]
@@ -927,7 +927,7 @@ sftp = [
 
 [[package]]
 name = "sft-ext"
-version = "0.7.4"
+version = "0.8.0"
 source = { editable = "D:/SFT Software Projects/sft_ext" }
 resolution-markers = [
     "sys_platform == 'win32'",
@@ -996,8 +996,8 @@ wheels = [
 
 [[package]]
 name = "timeclock-entry-processor"
-version = "1.5.3"
-source = { git = "https://github.com/AetherBreaker/timeclock_entry_processor?tag=v1.5.3#1629d6e5f7274506983e82057efc2461b7d7a3e0" }
+version = "1.6.0"
+source = { git = "https://github.com/AetherBreaker/timeclock_entry_processor?tag=v1.6.0#748a2edee3eb54d9923a5e9c054ffc2dc1fb7194" }
 resolution-markers = [
     "sys_platform == 'linux'",
 ]
@@ -1010,7 +1010,7 @@ dependencies = [
     { name = "pydantic-settings", marker = "sys_platform == 'linux'" },
     { name = "python-dateutil", marker = "sys_platform == 'linux'" },
     { name = "rich", marker = "sys_platform == 'linux'" },
-    { name = "sft-ext", version = "0.7.4", source = { git = "https://github.com/AetherBreaker/sft_ext?tag=v0.7.4#a876dd239afc78fa742bb0b06e97c25c39c13478" }, marker = "sys_platform == 'linux'" },
+    { name = "sft-ext", version = "0.8.0", source = { git = "https://github.com/AetherBreaker/sft_ext?tag=v0.8.0#26b58a7932b4e8116ed3d79232db05d4b0d8df7e" }, marker = "sys_platform == 'linux'" },
     { name = "typer", marker = "sys_platform == 'linux'" },
     { name = "types-python-dateutil", marker = "sys_platform == 'linux'" },
     { name = "tzdata", marker = "sys_platform == 'linux'" },
@@ -1019,7 +1019,7 @@ dependencies = [
 
 [[package]]
 name = "timeclock-entry-processor"
-version = "1.5.3"
+version = "1.6.0"
 source = { editable = "D:/SFT Software Projects/timeclock_entry_processor" }
 resolution-markers = [
     "sys_platform == 'win32'",
@@ -1033,7 +1033,7 @@ dependencies = [
     { name = "pydantic-settings", marker = "sys_platform == 'win32'" },
     { name = "python-dateutil", marker = "sys_platform == 'win32'" },
     { name = "rich", marker = "sys_platform == 'win32'" },
-    { name = "sft-ext", version = "0.7.4", source = { editable = "D:/SFT Software Projects/sft_ext" }, marker = "sys_platform == 'win32'" },
+    { name = "sft-ext", version = "0.8.0", source = { editable = "D:/SFT Software Projects/sft_ext" }, marker = "sys_platform == 'win32'" },
     { name = "typer", marker = "sys_platform == 'win32'" },
     { name = "types-python-dateutil", marker = "sys_platform == 'win32'" },
     { name = "tzdata", marker = "sys_platform == 'win32'" },
@@ -1050,8 +1050,8 @@ requires-dist = [
     { name = "pydantic-settings", specifier = "==2.*" },
     { name = "python-dateutil", specifier = "==2.9.*" },
     { name = "rich", specifier = "==15.*" },
-    { name = "sft-ext", marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = "==0.7.4" },
-    { name = "sft-ext", marker = "sys_platform == 'linux'", git = "https://github.com/AetherBreaker/sft_ext?tag=v0.7.4" },
+    { name = "sft-ext", marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = "==0.8.0" },
+    { name = "sft-ext", marker = "sys_platform == 'linux'", git = "https://github.com/AetherBreaker/sft_ext?tag=v0.8.0" },
     { name = "sft-ext", marker = "sys_platform == 'win32'", editable = "D:/SFT Software Projects/sft_ext" },
     { name = "typer", specifier = ">=0.26.0" },
     { name = "types-python-dateutil", specifier = "==2.9.*" },

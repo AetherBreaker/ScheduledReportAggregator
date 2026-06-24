@@ -2,13 +2,10 @@
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from email.message import EmailMessage
 from io import StringIO
 from logging import getLogger
 from pathlib import PurePosixPath
 from re import compile
-from smtplib import SMTP
-from ssl import create_default_context
 from typing import TYPE_CHECKING, ClassVar, TypedDict, override
 
 # Third party imports
@@ -18,8 +15,9 @@ from pandas import concat, isna, read_csv, to_numeric
 
 # First party imports
 from environment_init_vars import SETTINGS
-from jobs.base import HOLDING_FOLDER, CanRescheduleJobError, JobBase
-from sft_ext.utils import today
+from jobs.base import CanRescheduleJobError, JobBase
+from sft_ext.types import EmailMessageParts
+from sft_ext.utils import batch_send_emails, prepare_email_message, today
 
 if TYPE_CHECKING:
   # Standard library imports
@@ -373,27 +371,19 @@ class BalanceSheetJob(JobBase):
     return out_file
 
   def email_report(self, report_path: Path) -> None:
-    msg = EmailMessage()
-    msg.set_content("Attached is the latest RYO/SAS balance sheet report.")
-    msg["Subject"] = f"SAS/RYO Balance Sheet Report - {report_path.stem}"
-    msg["From"] = SETTINGS.alerts_email
-    msg["To"] = ", ".join(self.email_recipients)
-
-    ctx = create_default_context()
-
-    msg.add_attachment(
-      report_path.read_bytes(),
-      maintype="text",
-      subtype="csv",
-      filename=report_path.name,
+    assert isinstance(SETTINGS.alerts_email, str), "SETTINGS.alerts_email must be a string"
+    msg = prepare_email_message(
+      EmailMessageParts(
+        subject=f"SAS/RYO Balance Sheet Report - {report_path.stem}",
+        body="Attached is the latest RYO/SAS balance sheet report.",
+        from_addr=("SFT Bot", None, None, SETTINGS.alerts_email),
+        to_addrs=self.email_recipients,
+        attachments=report_path,
+      )
     )
 
-    with SMTP(SETTINGS.alerts_smtp_server, SETTINGS.alerts_smtp_port) as smtp:
-      smtp.ehlo()
-      smtp.starttls(context=ctx)
-      smtp.ehlo()
-      smtp.login(SETTINGS.alerts_email, SETTINGS.alerts_email_pwd)
-      smtp.send_message(msg)
+    batch_send_emails(msg)
+
     logger.info(f"Email sent with report {report_path.name} to {self.email_recipients}")
 
   def _test_download(self, ftp_key: Literal["ryo", "sas"]) -> Path | None:
@@ -416,16 +406,21 @@ class BalanceSheetJob(JobBase):
 
 
 if __name__ == "__main__":
+  # Standard library imports
+  from asyncio import run
+
   test_job = BalanceSheetJob()
+
+  run(test_job.main_job())
 
   # result = test_job._test_download("ryo")
 
-  test_job._test_assemble_report(  # pyright: ignore[reportPrivateUsage]
-    DownloadedFiles(
-      ryo=HOLDING_FOLDER / "balancesheetjob" / "ryo" / "RYO_ACH_Drafts_20260618164600000000.csv",
-      sas=HOLDING_FOLDER / "balancesheetjob" / "sas" / "Sweet_Fire_2026-06-17T03_31_24.476.csv",
-    )
-  )
+  # test_job._test_assemble_report(  # pyright: ignore[reportPrivateUsage]
+  #   DownloadedFiles(
+  #     ryo=HOLDING_FOLDER / "balancesheetjob" / "ryo" / "RYO_ACH_Drafts_20260618164600000000.csv",
+  #     sas=HOLDING_FOLDER / "balancesheetjob" / "sas" / "Sweet_Fire_2026-06-17T03_31_24.476.csv",
+  #   )
+  # )
   # report_path = CWD / "file_holding" / "balancesheetjob" / "output" / "sas_ryo_balance_sheet_20260617093924911622.csv"
 
   # test_job.email_report(report_path)

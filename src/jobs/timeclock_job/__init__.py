@@ -1,6 +1,6 @@
 if __name__ == "__main__":
   # First party imports
-  from sft_ext.logging.init_logging import init_logging
+  from sft_ext.logging.init import init_logging
 
   init_logging()
 
@@ -8,13 +8,9 @@ if __name__ == "__main__":
 from atexit import register
 from datetime import date
 from decimal import Decimal
-from email.message import EmailMessage
 from json import load
 from logging import getLogger
-from mimetypes import guess_type
 from pathlib import Path
-from smtplib import SMTP
-from ssl import create_default_context
 from subprocess import run
 from sys import executable
 from typing import TYPE_CHECKING, NamedTuple, override
@@ -30,6 +26,8 @@ from pandas import notna, read_csv
 from environment_init_vars import CWD, SETTINGS
 from jobs.base import CanRescheduleJobError, JobBase
 from jobs.timeclock_job.allotted_hours_model import AllottedHoursModel
+from sft_ext.types import EmailMessageParts
+from sft_ext.utils import batch_send_emails, prepare_email_message
 
 if TYPE_CHECKING:
   # Third party imports
@@ -330,75 +328,28 @@ class TimeclockJob(JobBase):
       if self.MAX_ALLOWED_OVER_HOURS >= over_under_hours >= self.MAX_ALLOWED_UNDER_HOURS:
         continue
 
+      over_under_str = "Over" if over_under_hours > 0 else "Under"
+      message = (
+        f"Store {store} is {over_under_str} allotted hours for the week ending {week_ending.isoformat()}.\n"
+        f"  Allotted Hours: {allotted_hours}\n"
+        f"  Worked Hours: {worked_hours}\n"
+        f"  {over_under_str} Hours: {abs(over_under_hours)}\n"
+      )
+
       emails_to_send.append(
-        self.prepare_email_message(
-          storenum=store,
-          week_ending=week_ending,
-          allotted_hours=allotted_hours,
-          worked_hours=worked_hours,
-          over_under_hours=over_under_hours,
-          attachments=[pdf_path, csv_path],
+        prepare_email_message(
+          EmailMessageParts(
+            subject=f"SFT{store:0>3} - Store {over_under_str} Allotted Hours by {abs(over_under_hours): >5} for Week Ending {week_ending.isoformat()}",
+            body=message,
+            from_addr=SETTINGS.alerts_email,
+            to_addrs=self.email_recipients,
+            attachments=[pdf_path, csv_path],
+          )
         )
       )
 
     if emails_to_send:
-      self.batch_send_emails(emails_to_send)
-
-  def prepare_email_message(
-    self,
-    storenum: StoreNum,
-    week_ending: date,
-    allotted_hours: int,
-    worked_hours: Decimal,
-    over_under_hours: Decimal,
-    attachments: list[Path],
-  ) -> EmailMessage:
-    over_under_str = "Over" if over_under_hours > 0 else "Under"
-    message = (
-      f"Store {storenum} is {over_under_str} allotted hours for the week ending {week_ending.isoformat()}.\n"
-      f"  Allotted Hours: {allotted_hours}\n"
-      f"  Worked Hours: {worked_hours}\n"
-      f"  {over_under_str} Hours: {abs(over_under_hours)}\n"
-    )
-
-    msg = EmailMessage()
-    msg.set_content(message)
-    msg["Subject"] = (
-      f"SFT{storenum:0>3} - Store {over_under_str} Allotted Hours by {abs(over_under_hours): >5} for Week Ending {week_ending.isoformat()}"
-    )
-    msg["From"] = SETTINGS.alerts_email
-    msg["To"] = ", ".join(self.email_recipients)
-
-    for attachment in attachments:
-      # attachment could be either pdf or csv, determine maintype and subtype based on suffix
-      ctype, encoding = guess_type(attachment.name)
-      if ctype is None or encoding is not None:
-        # Fallback to a generic binary stream if type is unknown
-        ctype = "application/octet-stream"
-
-      maintype, subtype = ctype.split("/", 1)
-
-      msg.add_attachment(
-        attachment.read_bytes(),
-        maintype=maintype,
-        subtype=subtype,
-        filename=attachment.name,
-      )
-
-    return msg
-
-  def batch_send_emails(self, messages: list[EmailMessage]) -> None:
-    ctx = create_default_context()
-
-    with SMTP(SETTINGS.alerts_smtp_server, SETTINGS.alerts_smtp_port) as smtp:
-      smtp.ehlo()
-      smtp.starttls(context=ctx)
-      smtp.ehlo()
-      smtp.login(SETTINGS.alerts_email, SETTINGS.alerts_email_pwd)
-
-      for msg in messages:
-        smtp.send_message(msg)
-        logger.info(f"Email sent with subject '{msg['Subject']}' to {msg['To']}")
+      batch_send_emails(emails_to_send)
 
   @staticmethod
   def _debug_get_fixed_timeclock_src() -> Path:

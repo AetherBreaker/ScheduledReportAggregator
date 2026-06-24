@@ -6,7 +6,7 @@ if __name__ == "__main__":
   from rich.console import Console
 
   # First party imports
-  from sft_ext.logging.init_logging import init_logging
+  from sft_ext.logging.init import init_logging
 
   RICH_CONSOLE = Console(
     width=None if platform == "win32" else 165,
