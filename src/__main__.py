@@ -103,6 +103,8 @@ async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
   #   jobstore="system_jobs",
   # )
 
+  await reschedule_jobs()  # Schedule all jobs on startup
+
   # Heartbeat job - writes timestamp every minute for health monitoring
   scheduler.add_job(
     write_heartbeat,
