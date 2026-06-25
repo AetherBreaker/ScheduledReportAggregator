@@ -77,7 +77,8 @@ jobs: tuple[tuple[type[JobBase], CronArgs], ...] = (
 
 
 async def reschedule_jobs() -> None:
-  scheduler.pause()
+  if scheduler.running:
+    scheduler.pause()
 
   scheduler.remove_all_jobs("general_jobs")
 
@@ -89,7 +90,8 @@ async def reschedule_jobs() -> None:
     )
     job.schedule_registered_jobs()
 
-  scheduler.resume()
+  if scheduler.running:
+    scheduler.resume()
 
 
 async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
@@ -135,8 +137,8 @@ async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
   scheduler.print_jobs()
 
   if __debug__:
-    # for job_cls, _ in jobs:
-    #   await job_cls().main_job()  # Run each job once immediately in debug mode for testing
+    for job_cls, _ in jobs:
+      await job_cls().main_job()  # Run each job once immediately in debug mode for testing
     pass
 
   RICH_CONSOLE.rule("[bold red]Boot Done[/]", style="bold red")
