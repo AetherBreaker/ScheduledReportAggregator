@@ -16,8 +16,8 @@ from dateutil.rrule import DAILY, rrule
 from pandas import concat, isna, read_csv, to_numeric
 
 # First party imports
-from environment_init_vars import SETTINGS
-from jobs.base import CanRescheduleJobError, JobBase
+from scheduled_report_aggregator.environment_init_vars import SETTINGS
+from scheduled_report_aggregator.jobs.base import CanRescheduleJobError, JobBase
 
 if TYPE_CHECKING:
   # Standard library imports

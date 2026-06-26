@@ -18,7 +18,7 @@ from apscheduler.schedulers.base import STATE_RUNNING, STATE_STOPPED
 from apscheduler.util import iscoroutinefunction_partial
 
 # First party imports
-from environment_init_vars import SETTINGS
+from scheduled_report_aggregator.environment_init_vars import SETTINGS
 
 if TYPE_CHECKING:
   # Standard library imports

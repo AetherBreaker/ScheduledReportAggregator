@@ -4,7 +4,7 @@ from logging import getLogger
 from pathlib import Path
 
 # First party imports
-from environment_settings import Settings
+from scheduled_report_aggregator.environment_settings import Settings
 
 logger = getLogger(__name__)
 

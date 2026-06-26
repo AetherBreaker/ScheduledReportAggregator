@@ -25,16 +25,16 @@ from gspread.utils import DateTimeOption, Dimension, ValueRenderOption
 from pandas import notna, read_csv
 
 # First party imports
-from environment_init_vars import CWD, SETTINGS
-from jobs.base import CanRescheduleJobError, JobBase
-from jobs.timeclock_job.allotted_hours_model import AllottedHoursModel
+from scheduled_report_aggregator.environment_init_vars import CWD, SETTINGS
+from scheduled_report_aggregator.jobs.base import CanRescheduleJobError, JobBase
+from scheduled_report_aggregator.jobs.timeclock_job.allotted_hours_model import AllottedHoursModel
 
 if TYPE_CHECKING:
   # Third party imports
   from gspread.client import Client
 
   # First party imports
-  from custom_types import StoreNum
+  from scheduled_report_aggregator.custom_types import StoreNum
 
 logger = getLogger(__name__)
 
