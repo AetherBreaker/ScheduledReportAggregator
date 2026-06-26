@@ -3,10 +3,8 @@ if __name__ == "__main__":
   from sys import platform
 
   # Third party imports
+  from aeth_ext import initialize
   from rich.console import Console
-
-  # First party imports
-  from sft_ext import initialize
 
   RICH_CONSOLE = Console(
     width=None if platform == "win32" else 165,
@@ -31,6 +29,7 @@ from logging import getLogger
 from typing import TYPE_CHECKING
 
 # Third party imports
+from aeth_ext.errors.err_handling import FATAL_EVENT
 from apscheduler.triggers.cron import CronTrigger
 
 # First party imports
@@ -38,7 +37,6 @@ from custom_types import CronArgs, DayOfWeek
 from environment_init_vars import SETTINGS
 from jobs import HOLDING_FOLDER, BalanceSheetJob, TimeclockJob
 from scheduler_config import Scheduler
-from sft_ext.errors.err_handling import FATAL_EVENT
 
 if TYPE_CHECKING:
   # Standard library imports

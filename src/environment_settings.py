@@ -6,11 +6,9 @@ from pathlib import Path
 from typing import Annotated
 
 # Third party imports
+from aeth_ext.settings import BaseSettings
 from pydantic import Field
 from pydantic_settings import SettingsConfigDict
-
-# First party imports
-from sft_ext.settings import BaseSettings
 
 logger = getLogger(__name__)
 

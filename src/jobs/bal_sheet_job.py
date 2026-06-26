@@ -9,6 +9,8 @@ from re import compile
 from typing import TYPE_CHECKING, TypedDict, override
 
 # Third party imports
+from aeth_ext.types import EmailMessageParts
+from aeth_ext.utils import batch_send_emails, prepare_email_message, today
 from dateutil.relativedelta import SA, SU, relativedelta
 from dateutil.rrule import DAILY, rrule
 from pandas import concat, isna, read_csv, to_numeric
@@ -16,8 +18,6 @@ from pandas import concat, isna, read_csv, to_numeric
 # First party imports
 from environment_init_vars import SETTINGS
 from jobs.base import CanRescheduleJobError, JobBase
-from sft_ext.types import EmailMessageParts
-from sft_ext.utils import batch_send_emails, prepare_email_message, today
 
 if TYPE_CHECKING:
   # Standard library imports

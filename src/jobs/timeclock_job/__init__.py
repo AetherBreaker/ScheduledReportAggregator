@@ -1,6 +1,6 @@
 if __name__ == "__main__":
-  # First party imports
-  from sft_ext.logging.init import init_logging
+  # Third party imports
+  from aeth_ext.logging.init import init_logging
 
   init_logging()
 
@@ -16,6 +16,8 @@ from sys import executable
 from typing import TYPE_CHECKING, NamedTuple, override
 
 # Third party imports
+from aeth_ext.types import EmailMessageParts
+from aeth_ext.utils import batch_send_emails, prepare_email_message
 from google.oauth2.service_account import Credentials
 from gspread.auth import authorize
 from gspread.http_client import BackOffHTTPClient
@@ -26,8 +28,6 @@ from pandas import notna, read_csv
 from environment_init_vars import CWD, SETTINGS
 from jobs.base import CanRescheduleJobError, JobBase
 from jobs.timeclock_job.allotted_hours_model import AllottedHoursModel
-from sft_ext.types import EmailMessageParts
-from sft_ext.utils import batch_send_emails, prepare_email_message
 
 if TYPE_CHECKING:
   # Third party imports

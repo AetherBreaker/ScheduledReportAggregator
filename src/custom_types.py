@@ -2,8 +2,8 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, NamedTuple, TypedDict
 
-# First party imports
-from sft_ext.types import StrEnum
+# Third party imports
+from aeth_ext.types import StrEnum
 
 if TYPE_CHECKING:
   # Standard library imports
