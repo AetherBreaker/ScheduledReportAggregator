@@ -6,7 +6,7 @@ if __name__ == "__main__":
   from rich.console import Console
 
   # First party imports
-  from sft_ext import initialize_async
+  from sft_ext import initialize
 
   RICH_CONSOLE = Console(
     width=None if platform == "win32" else 165,
@@ -15,7 +15,7 @@ if __name__ == "__main__":
   PROJECT_NAME = "ScheduledReportAggregator"
   LOGGING_TYPE = "daily"
 
-  initialize_async()
+  initialize(asyncio=True)
 else:
   # Third party imports
   from rich import get_console
