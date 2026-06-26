@@ -13,7 +13,7 @@ from apscheduler.triggers.cron import CronTrigger
 from dateutil.relativedelta import FR, MO, SA, SU, TH, TU, WE, relativedelta
 
 # First party imports
-from custom_types import DEFAULT_USE_ARGS, CronArgs, DayOfWeek, JobID, JobIDPrefix, JobIDSuffix, SubJobTriggerArgs, UseArgs
+from custom_types import DEFAULT_USE_ARGS, CronArgs, DayOfWeek, SubJobTriggerArgs, UseArgs
 from environment_init_vars import CWD, SETTINGS
 from ftp_configs import RYOSFTPClient, SASSFTPClient, SFTSFTPClient
 from sft_ext.errors.err_handling import FATAL_EVENT
@@ -31,6 +31,7 @@ if TYPE_CHECKING:
   from dateutil._common import weekday
 
   # First party imports
+  from custom_types import JobID, JobIDPrefix, JobIDSuffix
   from scheduler_config import Scheduler
 
 logger = getLogger(__name__)

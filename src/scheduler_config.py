@@ -2,7 +2,7 @@
 from datetime import timedelta
 from logging import getLogger
 from re import compile
-from typing import TYPE_CHECKING, Any, TextIO, override
+from typing import TYPE_CHECKING, override
 from zoneinfo import ZoneInfo
 
 # Third party imports
@@ -24,6 +24,7 @@ if TYPE_CHECKING:
   # Standard library imports
   from concurrent.futures import Future
   from datetime import datetime
+  from typing import Any, TextIO
 
   # Third party imports
   from apscheduler.job import Job

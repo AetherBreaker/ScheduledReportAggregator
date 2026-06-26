@@ -6,7 +6,7 @@ from io import StringIO
 from logging import getLogger
 from pathlib import PurePosixPath
 from re import compile
-from typing import TYPE_CHECKING, ClassVar, TypedDict, override
+from typing import TYPE_CHECKING, TypedDict, override
 
 # Third party imports
 from dateutil.relativedelta import SA, SU, relativedelta
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
   from collections.abc import Callable
   from pathlib import Path
   from re import Pattern
-  from typing import Literal
+  from typing import ClassVar, Literal
 
 logger = getLogger(__name__)
 
