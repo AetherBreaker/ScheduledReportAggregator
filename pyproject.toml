@@ -35,6 +35,9 @@
 [tool.poe]
   include_script = "poe_tasks:tasks"
 
+[tool.pyright]
+  extends = "../pyproject.toml"
+
 [tool.ruff]
   extend = "../pyproject.toml"
 

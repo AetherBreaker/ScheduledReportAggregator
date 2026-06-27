@@ -67,4 +67,4 @@ USER nonroot
 
 # Run the application via uv.
 WORKDIR /app
-CMD ["uv", "run", "-m", "scheduled_report_aggregator"]
+CMD ["uv", "run", "-m", "${PACKAGE_NAME}"]
