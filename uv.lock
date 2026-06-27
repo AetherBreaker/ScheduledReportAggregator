@@ -1151,7 +1151,7 @@ wheels = [
 
 [[package]]
 name = "scheduled-report-aggregator"
-version = "1.1.17"
+version = "1.1.18"
 source = { editable = "." }
 dependencies = [
     { name = "aeth-ext", version = "2.0.4", source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }, extra = ["async", "sftp"], marker = "sys_platform == 'linux'" },
