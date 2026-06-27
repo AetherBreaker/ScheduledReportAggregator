@@ -7,8 +7,6 @@ from zoneinfo import ZoneInfo
 
 # Third party imports
 import apscheduler.executors.base as exec_base
-from aeth_ext.errors.err_handling import handle_fatal_exc_sync
-from aeth_ext.utils import get_now
 from apscheduler.events import EVENT_JOB_ADDED, EVENT_JOB_EXECUTED, EVENT_JOB_MISSED, JobEvent, JobExecutionEvent
 from apscheduler.executors.asyncio import AsyncIOExecutor
 from apscheduler.jobstores.base import ConflictingIdError
@@ -18,7 +16,11 @@ from apscheduler.schedulers.base import STATE_RUNNING, STATE_STOPPED
 from apscheduler.util import iscoroutinefunction_partial
 
 # First party imports
-from scheduled_report_aggregator.environment_init_vars import SETTINGS
+from aeth_ext.errors.err_handling import handle_fatal_exc_sync
+from aeth_ext.utils import get_now
+
+# Local folder imports
+from .environment_init_vars import SETTINGS
 
 if TYPE_CHECKING:
   # Standard library imports

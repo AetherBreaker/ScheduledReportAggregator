@@ -1,5 +1,5 @@
 if __name__ == "__main__":
-  # Third party imports
+  # First party imports
   from aeth_ext.logging.init import init_logging
 
   init_logging()
@@ -16,8 +16,6 @@ from sys import executable
 from typing import TYPE_CHECKING, NamedTuple, override
 
 # Third party imports
-from aeth_ext.types import EmailMessageParts
-from aeth_ext.utils import batch_send_emails, prepare_email_message
 from google.oauth2.service_account import Credentials
 from gspread.auth import authorize
 from gspread.http_client import BackOffHTTPClient
@@ -25,9 +23,13 @@ from gspread.utils import DateTimeOption, Dimension, ValueRenderOption
 from pandas import notna, read_csv
 
 # First party imports
+from aeth_ext.types import EmailMessageParts
+from aeth_ext.utils import batch_send_emails, prepare_email_message
 from scheduled_report_aggregator.environment_init_vars import CWD, SETTINGS
 from scheduled_report_aggregator.jobs.base import CanRescheduleJobError, JobBase
-from scheduled_report_aggregator.jobs.timeclock_job.allotted_hours_model import AllottedHoursModel
+
+# Local folder imports
+from .allotted_hours_model import AllottedHoursModel
 
 if TYPE_CHECKING:
   # Third party imports

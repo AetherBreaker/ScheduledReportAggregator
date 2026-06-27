@@ -3,8 +3,8 @@ import os
 from logging import getLogger
 from pathlib import Path
 
-# First party imports
-from scheduled_report_aggregator.environment_settings import Settings
+# Local folder imports
+from .environment_settings import Settings
 
 logger = getLogger(__name__)
 

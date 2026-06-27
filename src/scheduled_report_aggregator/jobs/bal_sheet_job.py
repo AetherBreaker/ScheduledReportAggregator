@@ -9,15 +9,17 @@ from re import compile
 from typing import TYPE_CHECKING, TypedDict, override
 
 # Third party imports
-from aeth_ext.types import EmailMessageParts
-from aeth_ext.utils import batch_send_emails, prepare_email_message, today
 from dateutil.relativedelta import SA, SU, relativedelta
 from dateutil.rrule import DAILY, rrule
 from pandas import concat, isna, read_csv, to_numeric
 
 # First party imports
+from aeth_ext.types import EmailMessageParts
+from aeth_ext.utils import batch_send_emails, prepare_email_message, today
 from scheduled_report_aggregator.environment_init_vars import SETTINGS
-from scheduled_report_aggregator.jobs.base import CanRescheduleJobError, JobBase
+
+# Local folder imports
+from .base import CanRescheduleJobError, JobBase
 
 if TYPE_CHECKING:
   # Standard library imports
@@ -415,7 +417,7 @@ if __name__ == "__main__":
 
   # result = test_job._test_download("ryo")
 
-  # test_job._test_assemble_report(  # pyright: ignore[reportPrivateUsage]
+  # test_job._test_assemble_report(
   #   DownloadedFiles(
   #     ryo=HOLDING_FOLDER / "balancesheetjob" / "ryo" / "RYO_ACH_Drafts_20260618164600000000.csv",
   #     sas=HOLDING_FOLDER / "balancesheetjob" / "sas" / "Sweet_Fire_2026-06-17T03_31_24.476.csv",

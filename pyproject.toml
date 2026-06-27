@@ -20,7 +20,7 @@
   dev = [
     "apscheduler-stubs>=0.1.0.dev2",
     "pandas-stubs>=3.0.3.260530",
-    "poe-tasks>=1.0.1",
+    "poe-tasks",
     "poethepoet>=0.46.0",
     "pytest>=9.0.3",
     "types-python-dateutil>=2.9.0.20260518",

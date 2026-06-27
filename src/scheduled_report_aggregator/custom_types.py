@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, NamedTuple, TypedDict
 
-# Third party imports
+# First party imports
 from aeth_ext.types import StrEnum
 
 if TYPE_CHECKING:

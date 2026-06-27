@@ -5,11 +5,13 @@ from socket import gaierror
 from typing import override
 
 # Third party imports
-from aeth_ext.ftp import ProtocolEnum, ServerNotAvailableError, SFTPProtocol
 from paramiko import AutoAddPolicy, SFTPClient, SSHClient
 
 # First party imports
-from scheduled_report_aggregator.environment_init_vars import SETTINGS
+from aeth_ext.ftp import ProtocolEnum, ServerNotAvailableError, SFTPProtocol
+
+# Local folder imports
+from .environment_init_vars import SETTINGS
 
 logger = getLogger(__name__)
 
