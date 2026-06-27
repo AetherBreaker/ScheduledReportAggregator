@@ -59,12 +59,16 @@ RUN mkdir -p /app/persisted_data /app/file_holding /app/timeclock_playground \
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
 
+# Re-declare build arg and persist as ENV so it is available at runtime
+ARG PACKAGE_NAME
+ENV PACKAGE_NAME=${PACKAGE_NAME}
+
 # Reset the image entrypoint so we can explicitly invoke uv in CMD
 ENTRYPOINT []
 
 # Use the non-root user to run our application
 USER nonroot
 
-# Run the application via uv.
+# Run the application.
 WORKDIR /app
-CMD ["uv", "run", "-m", "${PACKAGE_NAME}"]
+CMD ["sh", "-c", "MODULE_NAME=$(printf '%s' \"$PACKAGE_NAME\" | tr '-' '_'); exec uv run -m \"$MODULE_NAME\""]
