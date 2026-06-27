@@ -5,7 +5,7 @@ FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim AS builder
 
 WORKDIR /app
 
-ARG PACKAGE_NAME=scheduled-report-aggregator
+ARG PACKAGE_NAME
 ARG PACKAGE_VERSION
 ARG SFTPYPI_INDEX_URL=https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple
 ARG PYPI_INDEX_URL=https://pypi.org/simple
