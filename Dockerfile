@@ -52,21 +52,19 @@ ENV PYTHONOPTIMIZE=1
 # Copy the virtual environment from the builder stage
 COPY --from=builder /app/.venv /app/.venv
 
-# create /app/persisted_data if it doesn't exist and set ownership to the non-root user
-RUN mkdir -p /app/persisted_data && chown -R 999:999 /app/persisted_data
-
-# Ensure the non-root user owns all the contents of the persisted_data folder
-RUN chown -R 999:999 /app/persisted_data
+# Create runtime writable directories and grant ownership to the non-root user.
+RUN mkdir -p /app/persisted_data /app/file_holding /app/timeclock_playground \
+  && chown -R 999:999 /app/persisted_data /app/file_holding /app/timeclock_playground
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Reset the entrypoint, don't invoke `uv`
+# Reset the image entrypoint so we can explicitly invoke uv in CMD
 ENTRYPOINT []
 
 # Use the non-root user to run our application
 USER nonroot
 
-# Run the application.
+# Run the application via uv.
 WORKDIR /app
-CMD ["python", "-m", "scheduled_report_aggregator"]
+CMD ["uv", "run", "-m", "scheduled_report_aggregator"]
