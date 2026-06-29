@@ -6,11 +6,9 @@ from pathlib import Path
 from typing import Annotated
 
 # Third party imports
+from aeth_ext.settings import BaseSettings
 from pydantic import Field
 from pydantic_settings import SettingsConfigDict
-
-# First party imports
-from aeth_ext.settings import BaseSettings
 
 logger = getLogger(__name__)
 
@@ -47,18 +45,18 @@ class Settings(BaseSettings):
 
   @property
   def sft_website_creds_file(self) -> Path:
-    return self.creds_file_reusable("SFT website creds file not found at expected location", "secrets", "sft_ftp_creds.json")
+    return self._creds_file_reusable("SFT website creds file not found at expected location", "secrets", "sft_ftp_creds.json")
 
   @property
   def sas_ftp_creds_file(self) -> Path:
-    return self.creds_file_reusable("SAS FTP creds file not found at expected location", "secrets", "sas_ftp_creds.json")
+    return self._creds_file_reusable("SAS FTP creds file not found at expected location", "secrets", "sas_ftp_creds.json")
 
   @property
   def ryo_ftp_creds_file(self) -> Path:
-    return self.creds_file_reusable("RYO FTP creds file not found at expected location", "secrets", "ryo_ftp_creds.json")
+    return self._creds_file_reusable("RYO FTP creds file not found at expected location", "secrets", "ryo_ftp_creds.json")
 
   @property
   def google_api_key_file(self) -> Path:
-    return self.creds_file_reusable(
+    return self._creds_file_reusable(
       "Google API key file not found at expected location", "secrets", "scheduledreportaggregator-bdd6c704c6b1.json"
     )
