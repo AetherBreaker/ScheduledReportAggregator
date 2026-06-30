@@ -118,7 +118,7 @@ class JobBase(metaclass=SingletonTypeABC):
   scheduler: Scheduler
   jobstore: str
 
-  def __init__(self):  # pyright: ignore[reportMissingSuperCall]
+  def __init__(self):
     self.active_jobs = {}  # track active jobs for cleanup if needed
     self.active_args = {}  # track active jobs' trigger args for rescheduling logic
     self.extra_jobs_register = {}
@@ -293,18 +293,18 @@ class JobBase(metaclass=SingletonTypeABC):
       "year": args.get("year") if use_args.year else None,
       "month": args.get("month") if use_args.month else None,
       "day": args.get("day") if use_args.day else None,
-      "day_of_week": args.get("day_of_week") if use_args.day_of_week else None,
+      # "day_of_week": args.get("day_of_week") if use_args.day_of_week else None,
       "hour": args.get("hour") if use_args.hour else None,
       "minute": args.get("minute") if use_args.minute else None,
       "second": args.get("second") if use_args.second else None,
-      "timezone": args.get("timezone"),
+      "tzinfo": args.get("timezone"),
     }
 
     reldel_args = {
       "year": args.get("year") if use_args.year else None,
       "month": args.get("month") if use_args.month else None,
       "day": args.get("day") if use_args.day else None,
-      "day_of_week": dtutil_weekday_map[args.get("day_of_week")](-1) if use_args.day_of_week else None,
+      "weekday": dtutil_weekday_map[args.get("day_of_week")](-1) if use_args.day_of_week else None,
       "hour": args.get("hour") if use_args.hour else None,
       "minute": args.get("minute") if use_args.minute else None,
       "second": args.get("second") if use_args.second else None,
@@ -314,7 +314,9 @@ class JobBase(metaclass=SingletonTypeABC):
 
     # convert new_cron_args to a datetime by using the current time as a base and replacing the specified fields with the cron args values
     now = datetime.now(tz=SETTINGS.tz)
-    base_dt = now.replace(**new_cron_args)
+    # Filter out None values and tzinfo=True (meaning "keep existing") so datetime.replace() only receives valid args
+    replace_args = {k: v for k, v in new_cron_args.items() if v is not None}
+    base_dt = now.replace(**replace_args)
 
     shifted_dt = base_dt + new_reldel + delta
 

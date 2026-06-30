@@ -58,7 +58,10 @@
       { index = "SFTPyPI", marker = "sys_platform == 'linux'" },
       { path = "../timeclock_entry_processor", editable = true, marker = "sys_platform == 'win32'" }
     ]
-    poe-tasks                 = [{ index = "SFTPyPI" }]
+    poe-tasks                 = [
+      { index = "SFTPyPI", marker = "sys_platform == 'linux'" },
+      { path = "../poe_tasks", editable = true, marker = "sys_platform == 'win32'" },
+    ]
 
   [[tool.uv.index]]
     name        = "SFTPyPI"
