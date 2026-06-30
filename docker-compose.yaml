@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
       args:
         PACKAGE_NAME: scheduled-report-aggregator
-        PACKAGE_VERSION: 1.1.24
+        PACKAGE_VERSION: 1.1.25
         SFTPYPI_INDEX_URL: ${SFTPYPI_INDEX_URL:-https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple}
         PYPI_INDEX_URL: ${PYPI_INDEX_URL:-https://pypi.org/simple}
     container_name: scheduled-report-aggregator
