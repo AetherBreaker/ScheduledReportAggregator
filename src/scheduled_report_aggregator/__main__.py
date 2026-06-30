@@ -71,8 +71,8 @@ scheduler = Scheduler.init_scheduler()
 
 
 jobs: tuple[tuple[type[JobBase], CronArgs], ...] = (
-  (TimeclockJob, CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=9, minute=0, second=0)),
-  (BalanceSheetJob, CronArgs(day_of_week=DayOfWeek.WEDNESDAY, hour=7, minute=0, second=0)),
+  (TimeclockJob, CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=9, minute=0, second=0, timezone=SETTINGS.tz)),
+  (BalanceSheetJob, CronArgs(day_of_week=DayOfWeek.WEDNESDAY, hour=7, minute=0, second=0, timezone=SETTINGS.tz)),
 )
 
 
@@ -414,7 +414,7 @@ class CronTrigger(BaseTrigger):
     )
 
 
-test = CronTrigger(**CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=13, minute=20, second=0))
+test = CronTrigger(**CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=13, minute=20, second=0, timezone=SETTINGS.tz))
 
 test2 = test.get_next_fire_time(None, datetime.now(tz=SETTINGS.tz))
 
@@ -464,7 +464,7 @@ async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
   job = TimeclockJob.init_job(
     scheduler=scheduler,
     job_id=TimeclockJob.__name__,
-    **CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=12, minute=50, second=0),
+    **CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=12, minute=50, second=0, timezone=SETTINGS.tz),
   )
   job.schedule_registered_jobs()
 
