@@ -414,7 +414,7 @@ class CronTrigger(BaseTrigger):
     )
 
 
-test = CronTrigger(**CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=12, minute=50, second=0))
+test = CronTrigger(**CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=13, minute=20, second=0))
 
 test2 = test.get_next_fire_time(None, datetime.now(tz=SETTINGS.tz))
 
