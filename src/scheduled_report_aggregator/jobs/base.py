@@ -156,7 +156,13 @@ class JobBase(metaclass=SingletonTypeABC):
     for job_id_suffix, (job_func, job_args) in self.jobs_register.items():
       wrapped_func, trigger, job_id = self.prep_job(job_func, job_args, job_id_suffix, base_cron_args or self.main_cron_args)
 
-      self.scheduler.add_job(wrapped_func, trigger=trigger, id=job_id, replace_existing=True)
+      self.scheduler.add_job(
+        wrapped_func,
+        trigger=trigger,
+        id=job_id,
+        replace_existing=True,
+        misfire_grace_time=None,  # pyright: ignore[reportArgumentType]
+      )
 
   def prep_job(
     self,
