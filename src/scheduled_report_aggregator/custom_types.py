@@ -7,7 +7,7 @@ from aeth_ext.types import StrEnum
 
 if TYPE_CHECKING:
   # Standard library imports
-  from datetime import timedelta, timezone
+  from datetime import timedelta
   from typing import NotRequired
   from zoneinfo import ZoneInfo
 
@@ -36,7 +36,7 @@ class CronArgsType(TypedDict):
   hour: NotRequired[int | str | None]
   minute: NotRequired[int | str | None]
   second: NotRequired[int | str | None]
-  timezone: NotRequired[ZoneInfo | timezone | None]
+  timezone: NotRequired[ZoneInfo | None]
 
 
 class DayOfWeek(StrEnum):

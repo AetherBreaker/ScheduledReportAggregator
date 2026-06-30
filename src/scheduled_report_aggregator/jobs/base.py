@@ -1,7 +1,7 @@
 # Standard library imports
 from abc import abstractmethod
 from contextvars import ContextVar
-from datetime import datetime, timedelta, timezone as dt_timezone
+from datetime import datetime, timedelta
 from functools import wraps
 from inspect import iscoroutinefunction
 from logging import getLogger
@@ -77,7 +77,7 @@ class CronArgs(IsPydantic):
   hour: int | str | None = None
   minute: int | str | None = None
   second: int | str | None = None
-  timezone: ZoneInfo | dt_timezone | None = SETTINGS.tz
+  timezone: ZoneInfo | None = SETTINGS.tz
 
   def keys(self):
     return self.__dict__.keys()
