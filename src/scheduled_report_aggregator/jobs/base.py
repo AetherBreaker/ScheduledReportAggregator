@@ -153,8 +153,10 @@ class JobBase(metaclass=SingletonTypeABC):
 
   def schedule_registered_jobs(self, base_cron_args: CronArgs | None = None) -> None:
     """Hook for adding sub-jobs to the scheduler. Override in subclasses if needed."""
+    now = datetime.now(tz=SETTINGS.tz)
     for job_id_suffix, (job_func, job_args) in self.jobs_register.items():
       wrapped_func, trigger, job_id = self.prep_job(job_func, job_args, job_id_suffix, base_cron_args or self.main_cron_args)
+      logger.info(f"{self.__class__.__name__}: Scheduling job '{job_id}' to run at {trigger.get_next_fire_time(None, now)}")
 
       self.scheduler.add_job(
         wrapped_func,
