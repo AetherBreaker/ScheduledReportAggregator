@@ -95,6 +95,9 @@ async def reschedule_jobs() -> None:
     scheduler.resume()
 
 
+# test
+
+
 async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
   HOLDING_FOLDER.mkdir(exist_ok=True)
   RICH_CONSOLE.rule("[bold red]Booting...[/]", style="bold red")
