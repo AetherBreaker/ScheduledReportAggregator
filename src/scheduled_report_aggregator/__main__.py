@@ -139,7 +139,7 @@ async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
   job = TimeclockJob.init_job(
     scheduler=scheduler,
     job_id=TimeclockJob.__name__,
-    **CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=11, minute=50, second=0),
+    **CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=11, minute=55, second=0),
   )
   job.schedule_registered_jobs()
 
