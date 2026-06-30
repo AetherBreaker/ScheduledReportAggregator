@@ -391,11 +391,20 @@ class TimeclockJob(JobBase):
 if __name__ == "__main__":
   # Third party imports
   import winloop as asyncio
-  # csv_file = CWD / "Time-Clock-Entry-Report_2026-05-14_19-31-12.csv"
 
+  # First party imports
+  # csv_file = CWD / "Time-Clock-Entry-Report_2026-05-14_19-31-12.csv"
   # TimeclockJob().run_processor(csv_file)
+  from scheduled_report_aggregator.custom_types import CronArgs, DayOfWeek
 
   job = TimeclockJob()
+  job.init_job(
+    scheduler="test",  # pyright: ignore[reportArgumentType]
+    job_id="test",
+    **CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=9, minute=0, second=0),
+  )
+
+  test = job.error_reschedule()
 
   # result = job.calculate_overunder_hours(job.load_manifest(CWD / "manifest.json"))
   # job.send_results(result)
