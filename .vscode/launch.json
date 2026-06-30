@@ -9,12 +9,12 @@
             "type": "debugpy",
             "request": "launch",
             "justMyCode": false,
-            "program": "${workspaceFolder}\\src\\",
+            "program": "${workspaceFolder}/src/scheduled_report_aggregator",
             "cwd": "${workspaceFolder}",
-            "envFile": "${workspaceFolder}\\.env",
+            "envFile": "${workspaceFolder}/.env",
             "env": {
-                "PYTHONPATH": "${workspaceFolder}\\src",
-                "PYTHONPYCACHEPREFIX": "${workspaceFolder}\\__pycache__",
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "PYTHONPYCACHEPREFIX": "${workspaceFolder}/__pycache__",
                 "PYTHONUNBUFFERED": "1"
             }
         },
@@ -26,10 +26,10 @@
             "console": "integratedTerminal",
             "justMyCode": false,
             "cwd": "${workspaceFolder}",
-            "envFile": "${workspaceFolder}\\.env",
+            "envFile": "${workspaceFolder}/.env",
             "env": {
-                "PYTHONPATH": "${workspaceFolder}\\src",
-                "PYTHONPYCACHEPREFIX": "${workspaceFolder}\\__pycache__",
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "PYTHONPYCACHEPREFIX": "${workspaceFolder}/__pycache__",
                 "PYTHONUNBUFFERED": "1"
             }
         }
