@@ -106,7 +106,7 @@ async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
   #   jobstore="system_jobs",
   # )
 
-  # await reschedule_jobs()  # Schedule all jobs on startup
+  await reschedule_jobs()  # Schedule all jobs on startup
 
   # Heartbeat job - writes timestamp every minute for health monitoring
   scheduler.add_job(
@@ -140,7 +140,7 @@ async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
   job = TimeclockJob.init_job(
     scheduler=scheduler,
     job_id=TimeclockJob.__name__,
-    **CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=12, minute=50, second=0, timezone=SETTINGS.tz),
+    **CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=14, minute=5, second=0, timezone=SETTINGS.tz),
   )
   job.schedule_registered_jobs()
 
