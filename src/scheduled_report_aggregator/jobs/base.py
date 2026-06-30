@@ -1,23 +1,25 @@
 # Standard library imports
 from abc import abstractmethod
 from contextvars import ContextVar
-from datetime import datetime
+from datetime import datetime, timedelta, timezone as dt_timezone
 from functools import wraps
 from inspect import iscoroutinefunction
 from logging import getLogger
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
+from zoneinfo import ZoneInfo
 
 # Third party imports
 from apscheduler.triggers.cron import CronTrigger
 from dateutil.relativedelta import FR, MO, SA, SU, TH, TU, WE, relativedelta
+from pydantic.dataclasses import dataclass
 
 # First party imports
 from aeth_ext.errors.err_handling import FATAL_EVENT
 from aeth_ext.ftp.adapter import AdaptedSFTP, FTPAdapter
 from aeth_ext.types.abc import SingletonTypeABC
 from aeth_ext.utils import today
-from scheduled_report_aggregator.custom_types import DEFAULT_USE_ARGS, CronArgs, DayOfWeek, SubJobTriggerArgs, UseArgs
+from scheduled_report_aggregator.custom_types import DEFAULT_USE_ARGS, CronArgsType, DayOfWeek, IsPydantic, SubJobTriggerArgs, UseArgs
 from scheduled_report_aggregator.environment_init_vars import CWD, SETTINGS
 from scheduled_report_aggregator.ftp_configs import RYOSFTPClient, SASSFTPClient, SFTSFTPClient
 
@@ -40,7 +42,7 @@ logger = getLogger(__name__)
 FTP_CVAR = ContextVar("FTP_CVAR")
 
 
-dtutil_weekday_map: dict[DayOfWeek | None, weekday] = {
+DTUTIL_WEEKDAY_MAP: dict[DayOfWeek | None, weekday] = {
   DayOfWeek.MONDAY: MO,
   DayOfWeek.TUESDAY: TU,
   DayOfWeek.WEDNESDAY: WE,
@@ -51,7 +53,7 @@ dtutil_weekday_map: dict[DayOfWeek | None, weekday] = {
   None: lambda x: None,  # for when day_of_week is not specified in cron args # type: ignore
 }
 
-num_to_weekday_map: dict[int, DayOfWeek] = {
+NUM_TO_WEEKDAY_MAP: dict[int, DayOfWeek] = {
   0: DayOfWeek.MONDAY,
   1: DayOfWeek.TUESDAY,
   2: DayOfWeek.WEDNESDAY,
@@ -63,6 +65,32 @@ num_to_weekday_map: dict[int, DayOfWeek] = {
 
 
 __all__ = ["HOLDING_FOLDER", "CanRescheduleJobError", "JobBase", "JobError"]
+HOLDING_FOLDER = CWD / "file_holding"
+
+
+@dataclass
+class CronArgs(IsPydantic):
+  year: int | str | None = None
+  month: int | str | None = None
+  day: int | str | None = None
+  day_of_week: DayOfWeek | None = None
+  hour: int | str | None = None
+  minute: int | str | None = None
+  second: int | str | None = None
+  timezone: ZoneInfo | dt_timezone | None = SETTINGS.tz
+
+  def keys(self):
+    return self.__dict__.keys()
+
+  def __getitem__(self, key: str) -> Any:
+    """Returns the value for a given field name."""
+    return getattr(self, key)
+
+  def get(self, key: str, default: Any = None) -> Any:
+    return self.__dict__.get(key, default)
+
+  def __contains__(self, key: str) -> bool:
+    return key in self.__dict__
 
 
 class CanRescheduleJobError(Exception):
@@ -81,9 +109,6 @@ class JobError(Exception):
     super().__init__(message)
     self.reason = reason or message
     self.count_error = count_error
-
-
-HOLDING_FOLDER = CWD / "file_holding"
 
 
 class JobBase(metaclass=SingletonTypeABC):
@@ -134,7 +159,7 @@ class JobBase(metaclass=SingletonTypeABC):
     scheduler: Scheduler,
     job_id: JobIDPrefix,
     jobstore: str = "general_jobs",
-    **kwargs: Unpack[CronArgs],
+    **kwargs: Unpack[CronArgsType],
   ) -> JobBase:
     self = cls()
     self.base_job_id = job_id
@@ -242,7 +267,7 @@ class JobBase(metaclass=SingletonTypeABC):
     self.cancel_self()
     self.schedule_registered_jobs()
 
-  def reschedule_self(self, **kwargs: Unpack[CronArgs]) -> None:
+  def reschedule_self(self, **kwargs: Unpack[CronArgsType]) -> None:
     """Clears this job and rebuilds it's schedule with a new base trigger."""
     self.cancel_self()
     self.main_cron_args = CronArgs(**kwargs)
@@ -312,7 +337,7 @@ class JobBase(metaclass=SingletonTypeABC):
       "year": args.get("year") if use_args.year else None,
       "month": args.get("month") if use_args.month else None,
       "day": args.get("day") if use_args.day else None,
-      "weekday": dtutil_weekday_map[args.get("day_of_week")](-1) if use_args.day_of_week else None,
+      "weekday": DTUTIL_WEEKDAY_MAP[args.get("day_of_week")](-1) if use_args.day_of_week else None,
       "hour": args.get("hour") if use_args.hour else None,
       "minute": args.get("minute") if use_args.minute else None,
       "second": args.get("second") if use_args.second else None,
@@ -333,7 +358,7 @@ class JobBase(metaclass=SingletonTypeABC):
       year=(year if isinstance(year := args.get("year"), str) else shifted_dt.year) if use_args.year else None,
       month=(month if isinstance(month := args.get("month"), str) else shifted_dt.month) if use_args.month else None,
       day=(day if isinstance(day := args.get("day"), str) else shifted_dt.day) if use_args.day else None,
-      day_of_week=num_to_weekday_map[shifted_dt.weekday()] if use_args.day_of_week else None,
+      day_of_week=NUM_TO_WEEKDAY_MAP[shifted_dt.weekday()] if use_args.day_of_week else None,
       hour=(hour if isinstance(hour := args.get("hour"), str) else shifted_dt.hour) if use_args.hour else None,
       minute=(minute if isinstance(minute := args.get("minute"), str) else shifted_dt.minute) if use_args.minute else None,
       second=(second if isinstance(second := args.get("second"), str) else shifted_dt.second) if use_args.second else None,

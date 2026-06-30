@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 __all__ = [
   "DEFAULT_USE_ARGS",
-  "CronArgs",
+  "CronArgsType",
   "DayOfWeek",
   "JobID",
   "JobIDPrefix",
@@ -28,7 +28,7 @@ __all__ = [
 ]
 
 
-class CronArgs(TypedDict):
+class CronArgsType(TypedDict):
   year: NotRequired[int | str | None]
   month: NotRequired[int | str | None]
   day: NotRequired[int | str | None]
@@ -72,3 +72,6 @@ type JobID = str
 type JobIDSuffix = JobID
 type JobIDPrefix = JobID
 type StoreNum = int
+
+
+class IsPydantic: ...

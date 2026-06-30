@@ -68,3 +68,9 @@
     url         = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple"
     publish-url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/"
     explicit    = true
+
+[tool.ruff.lint.flake8-type-checking]
+  runtime-evaluated-base-classes = [
+    "pydantic.dataclasses.PydanticDataclass",
+    "scheduled_report_aggregator.custom_types.IsPydantic",
+  ]

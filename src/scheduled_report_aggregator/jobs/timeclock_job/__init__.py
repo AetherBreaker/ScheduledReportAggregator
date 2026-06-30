@@ -26,7 +26,7 @@ from pandas import notna, read_csv
 from aeth_ext.types import EmailMessageParts
 from aeth_ext.utils import batch_send_emails, prepare_email_message
 from scheduled_report_aggregator.environment_init_vars import CWD, SETTINGS
-from scheduled_report_aggregator.jobs.base import CanRescheduleJobError, JobBase
+from scheduled_report_aggregator.jobs.base import CanRescheduleJobError, CronArgs, JobBase
 
 # Local folder imports
 from .allotted_hours_model import AllottedHoursModel
@@ -395,7 +395,7 @@ if __name__ == "__main__":
   # First party imports
   # csv_file = CWD / "Time-Clock-Entry-Report_2026-05-14_19-31-12.csv"
   # TimeclockJob().run_processor(csv_file)
-  from scheduled_report_aggregator.custom_types import CronArgs, DayOfWeek
+  from scheduled_report_aggregator.custom_types import DayOfWeek
 
   job = TimeclockJob()
   job.init_job(
