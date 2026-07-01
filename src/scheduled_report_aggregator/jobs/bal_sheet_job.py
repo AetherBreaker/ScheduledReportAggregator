@@ -191,8 +191,8 @@ class DownloadedFiles(TypedDict):
 class BalanceSheetJob(JobBase):
   reschedule_delay_minutes: ClassVar[int] = 10
   email_recipients = (
-    "denirosaco@sweetfiretobacco.com",
     "jacob.ogden@sweetfiretobacco.com",
+    "office@sweetfiretobacco.com",
   )
 
   def __post_init__(self) -> None:
