@@ -33,4 +33,5 @@ services:
     environment:
       # Alerts Emails
       - ALERTS_EMAIL=info@sweetfiretobacco.com
+      - ALERTS_EMAIL_PWD=${ALERTS_EMAIL_PWD:?}
       - ALERTS_RECIPIENTS=["jacob.ogden@sweetfiretobacco.com"]
