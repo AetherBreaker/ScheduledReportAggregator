@@ -14,7 +14,7 @@ supported-markers = [
 
 [[package]]
 name = "aeth-ext"
-version = "2.1.1"
+version = "3.0.0"
 source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'linux'",
@@ -27,9 +27,9 @@ dependencies = [
     { name = "rich", marker = "sys_platform == 'linux'" },
     { name = "tzdata", marker = "sys_platform == 'linux'" },
 ]
-sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/b0c/0d9ff495f878e/aeth_ext-2.1.1.tar.gz", hash = "sha256:b0c0d9ff495f878e521cc38ce336c04d74e9936d6a874d01991386487ffd15f2" }
+sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/294/b19f5803a84a7/aeth_ext-3.0.0.tar.gz", hash = "sha256:294b19f5803a84a75d5b544b0cd8e6a3c0b8b1b61fc6e18322e80d40c094f934" }
 wheels = [
-    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/0a6/c1b426bf02dc0/aeth_ext-2.1.1-py3-none-any.whl", hash = "sha256:0a6c1b426bf02dc070dafd058263317ecb6e68c8f3f44c70a5beb3e5623d92b6" },
+    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/809/d4fe9ba92f08d/aeth_ext-3.0.0-py3-none-any.whl", hash = "sha256:809d4fe9ba92f08d3d21babcaa0b377f7a01490fe6184c189aabd4c8fee10bbb" },
 ]
 
 [package.optional-dependencies]
@@ -42,7 +42,7 @@ sftp = [
 
 [[package]]
 name = "aeth-ext"
-version = "2.1.1"
+version = "3.0.0"
 source = { editable = "../aeth_ext" }
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'win32'",
@@ -1189,8 +1189,8 @@ name = "scheduled-report-aggregator"
 version = "1.2.6"
 source = { editable = "." }
 dependencies = [
-    { name = "aeth-ext", version = "2.1.1", source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }, extra = ["async", "sftp"], marker = "sys_platform == 'linux'" },
-    { name = "aeth-ext", version = "2.1.1", source = { editable = "../aeth_ext" }, extra = ["async", "sftp"], marker = "sys_platform == 'win32'" },
+    { name = "aeth-ext", version = "3.0.0", source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }, extra = ["async", "sftp"], marker = "sys_platform == 'linux'" },
+    { name = "aeth-ext", version = "3.0.0", source = { editable = "../aeth_ext" }, extra = ["async", "sftp"], marker = "sys_platform == 'win32'" },
     { name = "aiologic", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "apscheduler", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "gspread", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
@@ -1199,8 +1199,8 @@ dependencies = [
     { name = "pydantic-settings", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "python-dateutil", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "rich", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-    { name = "timeclock-entry-processor", version = "1.8.1", source = { editable = "../timeclock_entry_processor" }, marker = "sys_platform == 'win32'" },
-    { name = "timeclock-entry-processor", version = "1.8.2", source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }, marker = "sys_platform == 'linux'" },
+    { name = "timeclock-entry-processor", version = "1.9.0", source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }, marker = "sys_platform == 'linux'" },
+    { name = "timeclock-entry-processor", version = "1.9.0", source = { editable = "../timeclock_entry_processor" }, marker = "sys_platform == 'win32'" },
 ]
 
 [package.dev-dependencies]
@@ -1216,8 +1216,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aeth-ext", extras = ["sftp", "async"], marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = ">=2.1.1" },
-    { name = "aeth-ext", extras = ["sftp", "async"], marker = "sys_platform == 'linux'", specifier = ">=2.1.1", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
+    { name = "aeth-ext", extras = ["sftp", "async"], marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = ">=3.0.0" },
+    { name = "aeth-ext", extras = ["sftp", "async"], marker = "sys_platform == 'linux'", specifier = ">=3.0.0", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
     { name = "aeth-ext", extras = ["sftp", "async"], marker = "sys_platform == 'win32'", editable = "../aeth_ext" },
     { name = "aiologic", specifier = ">=0.16.0" },
     { name = "apscheduler", specifier = ">=3.11.2" },
@@ -1227,8 +1227,8 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.14.1" },
     { name = "python-dateutil", specifier = ">=2.9.0.post0" },
     { name = "rich", specifier = ">=15.0.0" },
-    { name = "timeclock-entry-processor", marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = ">=1.8.2" },
-    { name = "timeclock-entry-processor", marker = "sys_platform == 'linux'", specifier = ">=1.8.2", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
+    { name = "timeclock-entry-processor", marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = ">=1.9.0" },
+    { name = "timeclock-entry-processor", marker = "sys_platform == 'linux'", specifier = ">=1.9.0", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
     { name = "timeclock-entry-processor", marker = "sys_platform == 'win32'", editable = "../timeclock_entry_processor" },
 ]
 
@@ -1273,14 +1273,40 @@ wheels = [
 
 [[package]]
 name = "timeclock-entry-processor"
-version = "1.8.1"
+version = "1.9.0"
+source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }
+resolution-markers = [
+    "python_full_version >= '3.15' and sys_platform == 'linux'",
+    "python_full_version < '3.15' and sys_platform == 'linux'",
+]
+dependencies = [
+    { name = "aeth-ext", version = "3.0.0", source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }, marker = "sys_platform == 'linux'" },
+    { name = "aiologic", marker = "sys_platform == 'linux'" },
+    { name = "fpdf2", marker = "sys_platform == 'linux'" },
+    { name = "pandas", extra = ["performance"], marker = "sys_platform == 'linux'" },
+    { name = "pydantic", marker = "sys_platform == 'linux'" },
+    { name = "pydantic-settings", marker = "sys_platform == 'linux'" },
+    { name = "python-dateutil", marker = "sys_platform == 'linux'" },
+    { name = "rich", marker = "sys_platform == 'linux'" },
+    { name = "typer", marker = "sys_platform == 'linux'" },
+    { name = "tzdata", marker = "sys_platform == 'linux'" },
+    { name = "uvloop", marker = "sys_platform == 'linux'" },
+]
+sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/322/824ab1ad0e8d4/timeclock_entry_processor-1.9.0.tar.gz", hash = "sha256:322824ab1ad0e8d4751c3ebe310b079456d6d491e2cb47fca1d783e42eb9718b" }
+wheels = [
+    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/372/86d53fbb39a9e/timeclock_entry_processor-1.9.0-py3-none-any.whl", hash = "sha256:37286d53fbb39a9e35bbe450c9892630194d0b9038580e958fcb2e12275768c4" },
+]
+
+[[package]]
+name = "timeclock-entry-processor"
+version = "1.9.0"
 source = { editable = "../timeclock_entry_processor" }
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'win32'",
     "python_full_version < '3.15' and sys_platform == 'win32'",
 ]
 dependencies = [
-    { name = "aeth-ext", version = "2.1.1", source = { editable = "../aeth_ext" }, marker = "sys_platform == 'win32'" },
+    { name = "aeth-ext", version = "3.0.0", source = { editable = "../aeth_ext" }, marker = "sys_platform == 'win32'" },
     { name = "aiologic", marker = "sys_platform == 'win32'" },
     { name = "fpdf2", marker = "sys_platform == 'win32'" },
     { name = "pandas", extra = ["performance"], marker = "sys_platform == 'win32'" },
@@ -1295,8 +1321,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aeth-ext", marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = ">=2.0.3" },
-    { name = "aeth-ext", marker = "sys_platform == 'linux'", specifier = ">=2.0.3", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
+    { name = "aeth-ext", marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = ">=3.0.0" },
+    { name = "aeth-ext", marker = "sys_platform == 'linux'", specifier = ">=3.0.0", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
     { name = "aeth-ext", marker = "sys_platform == 'win32'", editable = "../aeth_ext" },
     { name = "aiologic", specifier = ">=0.16.0" },
     { name = "fpdf2", specifier = ">=2.8.7" },
@@ -1314,35 +1340,11 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "pandas-stubs", specifier = ">=3.0.0" },
-    { name = "poe-tasks", specifier = ">=1.0.1", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
+    { name = "poe-tasks", marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = ">=1.0.1" },
+    { name = "poe-tasks", marker = "sys_platform == 'linux'", specifier = ">=1.0.1", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
+    { name = "poe-tasks", marker = "sys_platform == 'win32'", editable = "../poe_tasks" },
     { name = "poethepoet", specifier = ">=0.46.0" },
     { name = "types-python-dateutil", specifier = ">=2.9.0" },
-]
-
-[[package]]
-name = "timeclock-entry-processor"
-version = "1.8.2"
-source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }
-resolution-markers = [
-    "python_full_version >= '3.15' and sys_platform == 'linux'",
-    "python_full_version < '3.15' and sys_platform == 'linux'",
-]
-dependencies = [
-    { name = "aeth-ext", version = "2.1.1", source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }, marker = "sys_platform == 'linux'" },
-    { name = "aiologic", marker = "sys_platform == 'linux'" },
-    { name = "fpdf2", marker = "sys_platform == 'linux'" },
-    { name = "pandas", extra = ["performance"], marker = "sys_platform == 'linux'" },
-    { name = "pydantic", marker = "sys_platform == 'linux'" },
-    { name = "pydantic-settings", marker = "sys_platform == 'linux'" },
-    { name = "python-dateutil", marker = "sys_platform == 'linux'" },
-    { name = "rich", marker = "sys_platform == 'linux'" },
-    { name = "typer", marker = "sys_platform == 'linux'" },
-    { name = "tzdata", marker = "sys_platform == 'linux'" },
-    { name = "uvloop", marker = "sys_platform == 'linux'" },
-]
-sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/07c/064826b99c10a/timeclock_entry_processor-1.8.2.tar.gz", hash = "sha256:07c064826b99c10a6fa0dfc96edd3dacc0624fa39042442ec3e23a0e41e9966a" }
-wheels = [
-    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/a28/5ea5ac8f0d7b2/timeclock_entry_processor-1.8.2-py3-none-any.whl", hash = "sha256:a285ea5ac8f0d7b2a2ff9901c08c659c2be821954de7169ce2b9bad449a4ffd9" },
 ]
 
 [[package]]

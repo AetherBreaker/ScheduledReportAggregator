@@ -4,7 +4,7 @@
   description     = "Add your description here"
   requires-python = ">=3.14"
   dependencies    = [
-    "aeth-ext[sftp, async]>=2.1.1",
+    "aeth-ext[sftp, async]>=3.0.0",
     "aiologic>=0.16.0",
     "apscheduler>=3.11.2",
     "gspread>=6.2.1",
@@ -13,7 +13,7 @@
     "pydantic-settings>=2.14.1",
     "python-dateutil>=2.9.0.post0",
     "rich>=15.0.0",
-    "timeclock-entry-processor>=1.8.2",
+    "timeclock-entry-processor>=1.9.0",
   ]
 
 [dependency-groups]
