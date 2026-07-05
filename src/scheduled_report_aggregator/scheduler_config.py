@@ -63,21 +63,21 @@ def run_job(job: Job, jobstore_alias: str, run_times: list[datetime], logger_nam
       grace_time = timedelta(seconds=job.misfire_grace_time)
       if difference > grace_time:
         events.append(JobExecutionEvent(EVENT_JOB_MISSED, job.id, jobstore_alias, run_time))
-        local_logger.warning(f'Run time of job "{job.id}" was missed by {difference}')
+        local_logger.warning('Run time of job "%s" was missed by %s', job.id, difference)
         continue
 
     if not any(pattern.match(job.id) for pattern in DO_NOT_LOG_PATTERNS):
-      logger.info(f'Scheduler: Running job "{job.id}" (scheduled at {run_time})')
-      local_logger.info(f'Scheduler: Running job "{job.id}" (scheduled at {run_time})')
+      logger.info('Scheduler: Running job "%s" (scheduled at %s)', job.id, run_time)
+      local_logger.info('Scheduler: Running job "%s" (scheduled at %s)', job.id, run_time)
     else:
-      logger.debug(f'Scheduler: Running job "{job.id}" (scheduled at {run_time})')
-      local_logger.debug(f'Scheduler: Running job "{job.id}" (scheduled at {run_time})')
+      logger.debug('Scheduler: Running job "%s" (scheduled at %s)', job.id, run_time)
+      local_logger.debug('Scheduler: Running job "%s" (scheduled at %s)', job.id, run_time)
     retval = job.func(*job.args, **job.kwargs)
     events.append(JobExecutionEvent(EVENT_JOB_EXECUTED, job.id, jobstore_alias, run_time, retval=retval))
     if not any(pattern.match(job.id) for pattern in DO_NOT_LOG_PATTERNS):
-      local_logger.info(f'Job "{job.id}" executed successfully')
+      local_logger.info('Job "%s" executed successfully', job.id)
     else:
-      local_logger.debug(f'Job "{job.id}" executed successfully')
+      local_logger.debug('Job "%s" executed successfully', job.id)
 
   return events
 
@@ -95,21 +95,21 @@ async def run_coroutine_job(job: Job, jobstore_alias: str, run_times: list[datet
       grace_time = timedelta(seconds=job.misfire_grace_time)
       if difference > grace_time:
         events.append(JobExecutionEvent(EVENT_JOB_MISSED, job.id, jobstore_alias, run_time))
-        local_logger.warning(f'Run time of job "{job.id}" was missed by {difference}')
+        local_logger.warning('Run time of job "%s" was missed by %s', job.id, difference)
         continue
 
     if not any(pattern.match(job.id) for pattern in DO_NOT_LOG_PATTERNS):
-      logger.info(f'Scheduler: Running job "{job.id}" (scheduled at {run_time})')
-      local_logger.info(f'Scheduler: Running job "{job.id}" (scheduled at {run_time})')
+      logger.info('Scheduler: Running job "%s" (scheduled at %s)', job.id, run_time)
+      local_logger.info('Scheduler: Running job "%s" (scheduled at %s)', job.id, run_time)
     else:
-      logger.debug(f'Scheduler: Running job "{job.id}" (scheduled at {run_time})')
-      local_logger.debug(f'Scheduler: Running job "{job.id}" (scheduled at {run_time})')
+      logger.debug('Scheduler: Running job "%s" (scheduled at %s)', job.id, run_time)
+      local_logger.debug('Scheduler: Running job "%s" (scheduled at %s)', job.id, run_time)
     retval = await job.func(*job.args, **job.kwargs)
     events.append(JobExecutionEvent(EVENT_JOB_EXECUTED, job.id, jobstore_alias, run_time, retval=retval))
     if not any(pattern.match(job.id) for pattern in DO_NOT_LOG_PATTERNS):
-      local_logger.info(f'Job "{job.id}" executed successfully')
+      local_logger.info('Job "%s" executed successfully', job.id)
     else:
-      local_logger.debug(f'Job "{job.id}" executed successfully')
+      local_logger.debug('Job "%s" executed successfully', job.id)
 
   return events
 
@@ -204,7 +204,7 @@ class Scheduler(AsyncIOScheduler):
     event = JobEvent(EVENT_JOB_ADDED, job.id, jobstore_alias)
     self._dispatch_event(event)
 
-    self._logger.info(f'Added job "{job.id}" to job store')
+    self._logger.info('Added job "%s" to job store', job.id)
 
     # Notify the scheduler about the new job
     if self.state == STATE_RUNNING:

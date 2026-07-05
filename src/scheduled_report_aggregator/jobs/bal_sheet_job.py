@@ -218,7 +218,7 @@ class BalanceSheetJob(JobBase):
     try:
       report_path = self.assemble_report(downloaded_files)
     except Exception as e:
-      logger.exception(f"{self.__class__.__name__}: Error assembling report:", exc_info=e)
+      logger.exception("%s: Error assembling report:", self.__class__.__name__, exc_info=e)
       raise CanRescheduleJobError(
         "error in report assembly",
         count_error=True,
@@ -227,7 +227,7 @@ class BalanceSheetJob(JobBase):
     try:
       self.email_report(report_path)
     except Exception as e:
-      logger.exception(f"{self.__class__.__name__}: Error emailing report:", exc_info=e)
+      logger.exception("%s: Error emailing report:", self.__class__.__name__, exc_info=e)
       raise CanRescheduleJobError("error in emailing report", count_error=True) from e
 
   def download_file(self, ftp_key: str) -> Path:
@@ -242,7 +242,7 @@ class BalanceSheetJob(JobBase):
       try:
         youngest_file = max(filtered_files, key=lambda f: f.modified_time)
       except ValueError:
-        logger.warning(f"No matching files found in {file_vars} for FTP {ftp_key}")
+        logger.warning("No matching files found in %s for FTP %s", file_vars, ftp_key)
         raise CanRescheduleJobError(
           f"Error in downloading file: missing {ftp_key} file", reason=f"missing {ftp_key} file", count_error=False
         ) from None
@@ -386,7 +386,7 @@ class BalanceSheetJob(JobBase):
 
     batch_send_emails(msg)
 
-    logger.info(f"Email sent with report {report_path.name} to {self.email_recipients}")
+    logger.info("Email sent with report %s to %s", report_path.name, self.email_recipients)
 
   def _test_download(self, ftp_key: Literal["ryo", "sas"]) -> Path | None:
     self.download_file(ftp_key)
@@ -400,7 +400,7 @@ class BalanceSheetJob(JobBase):
     try:
       report_path = self.assemble_report(downloaded_files)  # noqa: F841
     except Exception as e:
-      logger.exception(f"{self.__class__.__name__}: Error assembling report:", exc_info=e)
+      logger.exception("%s: Error assembling report:", self.__class__.__name__, exc_info=e)
       raise CanRescheduleJobError(
         "error in report assembly",
         count_error=True,

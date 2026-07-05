@@ -181,7 +181,7 @@ class JobBase(metaclass=SingletonTypeABC):
     now = datetime.now(tz=SETTINGS.tz)
     for job_id_suffix, (job_func, job_args) in self.jobs_register.items():
       wrapped_func, trigger, job_id = self.prep_job(job_func, job_args, job_id_suffix, base_cron_args or self.main_cron_args)
-      logger.info(f"{self.__class__.__name__}: Scheduling job '{job_id}' to run at {trigger.get_next_fire_time(None, now)}")
+      logger.info("%s: Scheduling job '%s' to run at %s", self.__class__.__name__, job_id, trigger.get_next_fire_time(None, now))
 
       self.scheduler.add_job(
         wrapped_func,
@@ -226,7 +226,7 @@ class JobBase(metaclass=SingletonTypeABC):
     @wraps(func)
     async def wrapper(*args: Params_T.args, **kwargs: Params_T.kwargs) -> Return_T | None:
       if self.errored:
-        logger.error(f"{self.__class__.__name__}: Job is in errored state. Skipping execution.")
+        logger.error("%s: Job is in errored state. Skipping execution.", self.__class__.__name__)
         return
 
       with self.job_id.set(job_id), self.jobname_cvar.set(self.__class__.__name__):
@@ -239,12 +239,12 @@ class JobBase(metaclass=SingletonTypeABC):
           self.error_reschedule(count=e.count_error, reason=e.reason)
 
         except JobError as e:
-          logger.error(f"{self.__class__.__name__}: Job encountered a major error. Freezing this jobs execution", exc_info=e)
+          logger.error("%s: Job encountered a major error. Freezing this jobs execution", self.__class__.__name__, exc_info=e)
           self.errored = True
           FATAL_EVENT.set()  # trigger shutdown in main
 
         except Exception as e:
-          logger.exception(f"{self.__class__.__name__}: Unexpected error in main_job:", exc_info=e)
+          logger.exception("%s: Unexpected error in main_job:", self.__class__.__name__, exc_info=e)
           self.errored = True
           FATAL_EVENT.set()  # trigger shutdown in main
 
@@ -279,12 +279,12 @@ class JobBase(metaclass=SingletonTypeABC):
       self.err_counter += 1
 
       if self.err_counter >= self.err_max_threshold:
-        logger.error(f"{self.__class__.__name__}: Maximum error threshold reached. Marking job as errored and triggering shutdown.")
+        logger.error("%s: Maximum error threshold reached. Marking job as errored and triggering shutdown.", self.__class__.__name__)
         self.errored = True
         FATAL_EVENT.set()  # trigger shutdown in main
         return
 
-    logger.info(f"{self.__class__.__name__}: Rescheduling due to {reason}")
+    logger.info("%s: Rescheduling due to %s", self.__class__.__name__, reason)
 
     delta = relativedelta(minutes=self.reschedule_delay_minutes)
     new_args = self.shift_cron_args(self.main_cron_args, delta)

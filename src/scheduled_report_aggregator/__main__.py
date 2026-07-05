@@ -61,7 +61,7 @@ if not __debug__:
     try:
       HEARTBEAT_FILE.write_text(datetime.now(SETTINGS.tz).isoformat())
     except Exception as e:
-      logger.error(f"Failed to write heartbeat: {e}")
+      logger.error("Failed to write heartbeat: %s", e)
 else:
 
   def write_heartbeat():
@@ -166,7 +166,7 @@ async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
     scheduler.pause()
     scheduler.shutdown(wait=False)
   except Exception as e:
-    logger.error(f"Fatal shutdown: failed to stop scheduler cleanly: {e}", exc_info=True)
+    logger.error("Fatal shutdown: failed to stop scheduler cleanly", exc_info=e)
 
   sys.exit(1)
 
