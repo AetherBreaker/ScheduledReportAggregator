@@ -17,9 +17,7 @@ from pandas import concat, isna, read_csv, to_numeric
 from aeth_ext.types import EmailMessageParts
 from aeth_ext.utils import batch_send_emails, prepare_email_message, today
 from scheduled_report_aggregator.environment_init_vars import SETTINGS
-
-# Local folder imports
-from .base import CanRescheduleJobError, JobBase
+from scheduled_report_aggregator.jobs.base import CanRescheduleJobError, JobBase
 
 if TYPE_CHECKING:
   # Standard library imports
