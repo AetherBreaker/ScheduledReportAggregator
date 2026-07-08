@@ -20,7 +20,7 @@
   dev = [
     "apscheduler-stubs>=0.1.0.dev2",
     "pandas-stubs>=3.0.3.260530",
-    "poe-tasks",
+    "poe-tasks>=4.0.1",
     "poethepoet>=0.47.0",
     "pytest>=9.0.3",
     "types-python-dateutil>=2.9.0.20260518",
@@ -64,6 +64,12 @@
       { index = "SFTPyPI", marker = "sys_platform == 'linux'" },
       { path = "../timeclock_entry_processor", editable = true, marker = "sys_platform == 'win32'" }
     ]
+    # aeth-ext                  = [
+    #   { index = "SFTPyPI" },
+    # ]
+    # timeclock-entry-processor = [
+    #   { index = "SFTPyPI" },
+    # ]
     poe-tasks                 = [
       { index = "SFTPyPI", marker = "sys_platform == 'linux'" },
       { path = "../poe_tasks", editable = true, marker = "sys_platform == 'win32'" },
