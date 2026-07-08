@@ -26,6 +26,7 @@ from pandas import notna, read_csv
 from aeth_ext.types import EmailMessageParts
 from aeth_ext.utils import batch_send_emails, prepare_email_message
 from scheduled_report_aggregator.environment_init_vars import CWD, SETTINGS
+from scheduled_report_aggregator.jobs.base import CanRescheduleJobError, JobBase
 from scheduled_report_aggregator.jobs.timeclock_job.allotted_hours_model import AllottedHoursModel
 
 if TYPE_CHECKING:

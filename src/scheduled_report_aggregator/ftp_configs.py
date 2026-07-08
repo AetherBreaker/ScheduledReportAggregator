@@ -8,7 +8,8 @@ from typing import override
 from paramiko import AutoAddPolicy, SFTPClient, SSHClient
 
 # First party imports
-from aeth_ext.ftp import ProtocolEnum, ServerNotAvailableError, SFTPProtocol
+from aeth_ext.ftp.errors import ServerNotAvailableError
+from aeth_ext.ftp.types import ProtocolEnum, SFTPProtocol
 
 # Local folder imports
 from .environment_init_vars import SETTINGS
