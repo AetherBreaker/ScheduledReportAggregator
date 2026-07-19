@@ -1,0 +1,32 @@
+services:
+  scheduled-report-aggregator:
+    container_name: scheduled-report-aggregator
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        GIT_TAG: v1.3.3
+        GIT_REPO: https://github.com/AetherBreaker/ScheduledReportAggregator.git
+    restart: no
+    volumes:
+      - type: bind
+        source: /data/reports_processing_files
+        target: /app/persisted_data
+    environment:
+      - ALERTS_EMAIL=info@sweetfiretobacco.com
+      - ALERTS_EMAIL_PWD=${ALERTS_EMAIL_PWD:?}
+      - ALERTS_RECIPIENTS=["jacob.ogden@sweetfiretobacco.com"]
+    networks:
+      - coolify
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - bash -ec '[ -f /app/persisted_data/logs/heartbeat.txt ] && ts=$$(cat /app/persisted_data/logs/heartbeat.txt 2>/dev/null) && [ -n "$$ts" ] && hb=$$(date -d "$$ts" +%s 2>/dev/null) && now=$$(date +%s) && [ $$((now - hb)) -lt 180 ]'
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+networks:
+  coolify:
+    external: true

@@ -16,6 +16,9 @@
     "timeclock-entry-processor>=1.9.1",
   ]
 
+  [project.scripts]
+    run-app-scheduled-report-aggregator = "scheduled_report_aggregator.__main__:run_app"
+
 [dependency-groups]
   dev = [
     "apscheduler-stubs>=0.1.0.dev2",
@@ -32,14 +35,47 @@
   ]
   build-backend = "uv_build"
 
+[tool.coverage.run]
+  data_file   = ".cache/.coverage"
+  source_pkgs = ["scheduled_report_aggregator"]
+
+[tool.coverage.report]
+  show_missing = true
+
+[tool.docker]
+  # Paths relative to /app that the entrypoint will chown to nonroot:nonroot.
+  # Typically these are directories that will be bind-mounted as Docker volumes.
+  chown_paths = [
+    "persisted_data",
+  ]
+  mkdirs      = ["file_holding"]
+
 [tool.poe]
   include_script = "poe_tasks:tasks"
+
+  [tool.poe.tasks.sync]
+    help  = "Sync venv and ensure this project's scripts win over same-named dependency scripts"
+    shell = "uv sync && uv sync --reinstall-package scheduled-report-aggregator"
 
 [tool.pyright]
   extends = "../pyproject.toml"
 
+[tool.pytest.ini_options]
+  addopts      = [
+    "--cov",
+    "--cov-report=term-missing",
+    "--strict-markers",
+    "--strict-config",
+    "-ra"
+  ]
+  cache_dir    = ".cache/pytest"
+  testpaths    = ["tests"]
+  xfail_strict = true
+  asyncio_mode = "auto"
+
 [tool.ruff]
-  extend = "../pyproject.toml"
+  extend    = "../pyproject.toml"
+  cache-dir = ".cache/ruff"
 
   src = ["./src"]
 
@@ -56,23 +92,24 @@
   ]
 
   [tool.uv.sources]
+    # aeth-ext                  = [
+    #   { index = "SFTPyPI" },
+    # ]
     aeth-ext                  = [
       { index = "SFTPyPI", marker = "sys_platform == 'linux'" },
       { path = "../aeth_ext", editable = true, marker = "sys_platform == 'win32'" },
     ]
+    # timeclock-entry-processor = [
+    #   { index = "SFTPyPI" },
+    # ]
     timeclock-entry-processor = [
       { index = "SFTPyPI", marker = "sys_platform == 'linux'" },
       { path = "../timeclock_entry_processor", editable = true, marker = "sys_platform == 'win32'" }
     ]
-    # aeth-ext                  = [
-    #   { index = "SFTPyPI" },
-    # ]
-    # timeclock-entry-processor = [
-    #   { index = "SFTPyPI" },
-    # ]
     poe-tasks                 = [
-      { index = "SFTPyPI", marker = "sys_platform == 'linux'" },
-      { path = "../poe_tasks", editable = true, marker = "sys_platform == 'win32'" },
+      { index = "SFTPyPI" },
+      # , marker = "sys_platform == 'linux'"
+      # { path = "../poe_tasks", editable = true, marker = "sys_platform == 'win32'" },
     ]
 
   [[tool.uv.index]]
