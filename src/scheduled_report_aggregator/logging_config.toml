@@ -1,0 +1,41 @@
+#:schema ../../logging_config_schema.json
+# Local-mode logging override (merged onto the packaged aeth_ext defaults; see
+# LoggingConfig.override_mode = "merge"). Routes apscheduler records into their
+# own rotating files instead of the main program logs. logdir:// paths resolve
+# beneath the process's log folder (settings.log_loc_folder).
+#
+# NOTE: this file is only discovered in *local* logging mode
+# (initialize(logging=True)). Socket mode looks for logging_config_socket.toml
+# instead, which this project intentionally does not ship: apscheduler records
+# must propagate to the root socket handler so the central log server can
+# perform the same split server-side (see remote_logging_config.toml).
+
+version = 1
+
+[handlers.scheduler_debug]
+  class       = "aeth_ext.logging.bases.CustomTimedRotatingFileHandler"
+  filename    = "logdir://scheduler_debug.txt"
+  when        = "midnight"
+  backupCount = 14
+  delay       = true
+  level       = "DEBUG"
+  formatter   = "preferred"
+
+[handlers.scheduler_info]
+  class       = "aeth_ext.logging.bases.CustomTimedRotatingFileHandler"
+  filename    = "logdir://scheduler.txt"
+  when        = "midnight"
+  backupCount = 14
+  delay       = true
+  level       = "INFO"
+  formatter   = "preferred"
+
+[handlers.scheduler_queue]
+  class                 = "logging.handlers.QueueHandler"
+  respect_handler_level = true
+  handlers              = ["scheduler_debug", "scheduler_info"]
+
+[loggers.apscheduler]
+  level     = "DEBUG"
+  handlers  = ["scheduler_queue"]
+  propagate = false
