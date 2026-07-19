@@ -48,7 +48,7 @@
   chown_paths = [
     "persisted_data",
   ]
-  mkdirs      = ["file_holding"]
+  mkdirs      = ["file_holding", "timeclock_playground"]
 
 [tool.poe]
   include_script = "poe_tasks:tasks"
