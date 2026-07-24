@@ -14,7 +14,7 @@
     "python-dateutil>=2.9.0.post0",
     "rich>=15.0.0",
     "timeclock-entry-processor>=1.9.1",
-  ]
+]
 
   [project.scripts]
     run-app-scheduled-report-aggregator = "scheduled_report_aggregator.__main__:run_app"
@@ -83,6 +83,7 @@
     runtime-evaluated-base-classes = [
       "pydantic.dataclasses.PydanticDataclass",
       "scheduled_report_aggregator.custom_types.IsPydantic",
+      "aeth_ext.types.IsPydanticSlots",
     ]
 
 [tool.uv]
