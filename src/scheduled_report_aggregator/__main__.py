@@ -12,6 +12,7 @@ RICH_CONSOLE = Console(
   log_time=platform == "win32",
 )
 PROJECT_NAME = "scheduled-report-aggregator"
+TESTING = __debug__
 
 
 def run_app() -> None:
