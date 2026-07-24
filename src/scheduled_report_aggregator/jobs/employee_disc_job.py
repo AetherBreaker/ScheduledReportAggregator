@@ -216,11 +216,13 @@ class EmployeeDiscountsJob(JobBase):
                 reason=f"{ftp_key} file not found after download",
                 count_error=False,
               ) from None
-    finally:
+    except BaseException as e:
       # unlink previously found files to reset the state for the next run
       for file_path in found_files.values():
         if file_path.exists():
           file_path.unlink()
+
+      raise e
 
     return found_files
 
