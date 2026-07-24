@@ -6,7 +6,7 @@ from functools import wraps
 from inspect import iscoroutinefunction
 from logging import getLogger
 from pathlib import PurePosixPath
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 from zoneinfo import ZoneInfo
 
 # Third party imports
@@ -16,7 +16,7 @@ from pydantic.dataclasses import dataclass
 
 # First party imports
 from aeth_ext.errors.err_handling import FATAL_EVENT
-from aeth_ext.ftp.adapter import AdaptedSFTP, FTPAdapter
+from aeth_ext.ftp.adapter import AdaptedFTP, AdaptedSFTP, FTPAdapter
 from aeth_ext.types.abc import SingletonTypeABC
 from aeth_ext.utils import today
 from scheduled_report_aggregator.custom_types import DEFAULT_USE_ARGS, CronArgsType, DayOfWeek, IsPydantic, SubJobTriggerArgs, UseArgs
@@ -111,10 +111,15 @@ class JobError(Exception):
     self.count_error = count_error
 
 
+type FTPHandlerKey = Literal["sft", "sas", "ryo"]
+
+type FTPHandlersType = dict[FTPHandlerKey, FTPAdapter[AdaptedFTP | AdaptedSFTP]]
+
+
 class JobBase(metaclass=SingletonTypeABC):
   jobname_cvar = FTP_CVAR
 
-  ftp_handlers: ClassVar = {
+  ftp_handlers: ClassVar[FTPHandlersType] = {
     "sft": FTPAdapter[AdaptedSFTP](SFTSFTPClient, container_cvar=FTP_CVAR),
     "sas": FTPAdapter[AdaptedSFTP](SASSFTPClient, container_cvar=FTP_CVAR),
     "ryo": FTPAdapter[AdaptedSFTP](RYOSFTPClient, container_cvar=FTP_CVAR),

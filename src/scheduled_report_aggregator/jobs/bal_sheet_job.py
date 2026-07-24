@@ -17,7 +17,7 @@ from pandas import concat, isna, read_csv, to_numeric
 from aeth_ext.types import EmailMessageParts
 from aeth_ext.utils import batch_send_emails, prepare_email_message, today
 from scheduled_report_aggregator.environment_init_vars import SETTINGS
-from scheduled_report_aggregator.jobs.base import CanRescheduleJobError, JobBase
+from scheduled_report_aggregator.jobs.base import CanRescheduleJobError, FTPHandlerKey, JobBase
 
 if TYPE_CHECKING:
   # Standard library imports
@@ -194,7 +194,7 @@ class BalanceSheetJob(JobBase):
   )
 
   def __post_init__(self) -> None:
-    self.file_details = {
+    self.file_details: dict[FTPHandlerKey, FileVars] = {
       "ryo": FileVars(
         pickup_folder=PurePosixPath("/Accounting"),
         filename_pattern_factory=assemble_ryo_filename_pattern,
@@ -228,7 +228,7 @@ class BalanceSheetJob(JobBase):
       logger.exception("%s: Error emailing report:", self.__class__.__name__, exc_info=e)
       raise CanRescheduleJobError("error in emailing report", count_error=True) from e
 
-  def download_file(self, ftp_key: str) -> Path:
+  def download_file(self, ftp_key: FTPHandlerKey) -> Path:
     file_vars = self.file_details[ftp_key]
     with self.ftp_handlers[ftp_key].start_session() as conn:
       files = conn.listdir(file_vars.pickup_folder.as_posix())
