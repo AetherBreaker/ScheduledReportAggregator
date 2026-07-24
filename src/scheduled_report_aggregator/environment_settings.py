@@ -6,9 +6,11 @@ from pathlib import Path
 from typing import Annotated
 
 # Third party imports
-from aeth_ext.settings import BaseSettings
 from pydantic import Field
 from pydantic_settings import SettingsConfigDict
+
+# First party imports
+from aeth_ext.settings import BaseSettings
 
 logger = getLogger(__name__)
 
@@ -42,6 +44,9 @@ class Settings(BaseSettings):
   timeclock_font_input_loc: Annotated[Path, Field(alias="TIMECLOCK_FONT_INPUT_LOC")] = persisted_dir_loc / "timeclock_font_input"
 
   allotted_hours_sheet_id: Annotated[str, Field(alias="ALLOTTED_HOURS_SHEET_ID")] = "1Fn1FBZZAQwrB6v-wkMGkeIN12Aui7SyZvYpEBvc4Wjk"
+  employee_discounts_report_sheet_id: Annotated[str, Field(alias="EMPLOYEE_DISCOUNTS_REPORT_SHEET_ID")] = (
+    "14n2dIZ1A1DKy1BEZt82sJOg9d14R67EFFL0yQSNUhuI"
+  )
 
   @property
   def sft_website_creds_file(self) -> Path:
