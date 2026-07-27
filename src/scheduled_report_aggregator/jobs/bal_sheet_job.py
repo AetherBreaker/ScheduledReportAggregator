@@ -94,17 +94,14 @@ def _assemble_range_pattern(
 
   second_digit = None
 
-  try:
-    first_digit = int(end_val[0])
-    if len(end_val) == 2:  # noqa: PLR2004
-      second_digit = int(end_val[1])
-  except ValueError as e:
-    raise e
+  first_digit = int(end_val[0])
+  if len(end_val) == 2:  # noqa: PLR2004
+    second_digit = int(end_val[1])
 
   if len(end_val) == 2:  # noqa: PLR2004
     patterns = []
 
-    for d1 in range(0, first_digit + 1):
+    for d1 in range(first_digit + 1):
       if d1 == 0:
         patt = rf"{d1}[{start_val}-{d2_max}]"
       elif d1 == first_digit:
@@ -255,7 +252,7 @@ class BalanceSheetJob(JobBase):
   def download_all_files(self) -> DownloadedFiles:
     downloaded_files: dict[str, Path] = {}
     with self.jobname_cvar.set(self.__class__.__name__):
-      for ftp_key in self.file_details.keys():
+      for ftp_key in self.file_details:
         try:
           local_file = self.download_file(ftp_key)
         except Exception:

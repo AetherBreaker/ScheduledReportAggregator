@@ -262,7 +262,7 @@ class JobBase(metaclass=SingletonTypeABC):
 
   def cancel_self(self) -> None:
     """Cancels this job from the scheduler."""
-    for job_id in self.active_jobs.copy().keys():
+    for job_id in self.active_jobs.copy():
       self.scheduler.remove_job(job_id)
       self.active_jobs.pop(job_id, None)
       self.active_args.pop(job_id, None)

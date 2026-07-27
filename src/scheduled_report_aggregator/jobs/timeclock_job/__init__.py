@@ -213,7 +213,7 @@ class TimeclockJob(JobBase):
       exec_args = [
         executable,
         "-c",
-        ";".join(
+        ";".join(  # noqa: FLY002
           [
             "import runpy, sys",
             "sys.argv[0] = 'timeclock_entry_processor'",
