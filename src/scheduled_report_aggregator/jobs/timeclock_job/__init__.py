@@ -363,8 +363,8 @@ class TimeclockJob(JobBase):
 
     return overunder_data
 
-  MAX_ALLOWED_OVER_HOURS = Decimal("1")
-  MAX_ALLOWED_UNDER_HOURS = Decimal("-10")
+  MAX_ALLOWED_OVER_HOURS = Decimal(1)
+  MAX_ALLOWED_UNDER_HOURS = Decimal(-10)
 
   def send_results(self, overunder_data: set[OverUnderEntry]):
     logger.info("Preparing over/under alert emails")
