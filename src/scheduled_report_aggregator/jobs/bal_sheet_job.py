@@ -258,10 +258,10 @@ class BalanceSheetJob(JobBase):
       for ftp_key in self.file_details.keys():
         try:
           local_file = self.download_file(ftp_key)
-        except Exception as e:
+        except Exception:
           for file in downloaded_files.values():
             file.unlink(missing_ok=True)
-          raise e
+          raise
 
         downloaded_files[ftp_key] = local_file
 
