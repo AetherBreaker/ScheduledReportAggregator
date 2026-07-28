@@ -113,8 +113,9 @@ DEFAULT_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 class TimeclockJob(JobBase):
   creds = Credentials.from_service_account_file(SETTINGS.google_api_key_file, scopes=DEFAULT_SCOPES)
 
-  sheet_tab_store_range = "'Sheet1'!R2C1:C1"
-  sheet_tab_allotted_hours_range = "'Sheet1'!R2C3:C3"
+  sheet_tab_store_range = "'{sheet_name}'!R2C1:C1"
+  sheet_tab_allotted_hours_range = "'{sheet_name}'!R2C3:C3"
+  sheet_tab_training_range = "'{sheet_name}'!R2C7:C7"
 
   email_recipients = (
     # "denirosaco@sweetfiretobacco.com",
@@ -302,11 +303,15 @@ class TimeclockJob(JobBase):
 
     return manifest_data
 
-  def get_allotted_hours(self) -> dict[StoreNum, int]:
+  def get_allotted_hours[Date_T: date](self, week_ending_dates: list[Date_T]) -> dict[Date_T, dict[StoreNum, int]]:
     logger.debug("Fetching allotted hours from Google Sheet (id=%s)", SETTINGS.allotted_hours_sheet_id)
+
     result = self.client.http_client.values_batch_get(
       id=SETTINGS.allotted_hours_sheet_id,
-      ranges=[self.sheet_tab_store_range, self.sheet_tab_allotted_hours_range],
+      ranges=[
+        self.sheet_tab_store_range.format(sheet_name="Base Sheet"),
+        self.sheet_tab_allotted_hours_range.format(sheet_name="Base Sheet"),
+      ],
       params={
         "majorDimension": Dimension.rows,
         "valueRenderOption": ValueRenderOption.unformatted,
@@ -328,7 +333,16 @@ class TimeclockJob(JobBase):
     overunder_data: set[OverUnderEntry] = set()
     logger.debug("Calculating over/under hours for %d store(s)", len(weeks_data))
 
-    allotted_hours = self.get_allotted_hours()
+    dt_min = min(week for weeks in weeks_data.values() for week in weeks)
+    dt_max = max(week for weeks in weeks_data.values() for week in weeks)
+
+    until_anchor = dt_max + relativedelta(weekday=SU(+1), hour=23, minute=59, second=59, microsecond=999999)
+
+    dtstart_anchor = dt_min - relativedelta(weekday=MO(-1), hour=0, minute=0, second=0, microsecond=0)
+
+    valid_sheet_weeks = [dt.date() for dt in rrule(WEEKLY, dtstart=dtstart_anchor, until=until_anchor, byweekday=SU)]
+
+    allotted_hours = self.get_allotted_hours(valid_sheet_weeks)
 
     employee_groups = read_csv(
       MANUAL_EMPLOYEE_LIST_CSV,
@@ -485,4 +499,6 @@ if __name__ == "__main__":
   # job.send_results(result)
 
   asyncio.run(job.main_job())
-  pass
+  # asyncio.run(
+  #   job.run_processor(CWD / "file_holding" / "timeclockjob" / "schedule_reports" / "Automated-Schedule-Report_2026-07-28_12-02-37.csv")
+  # )
