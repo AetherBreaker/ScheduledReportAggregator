@@ -11,8 +11,11 @@ from decimal import Decimal
 from io import StringIO, TextIOWrapper
 from json import load
 from logging import getLogger
+from multiprocessing import Queue
+from multiprocessing.managers import BaseManager
 from os import environ
 from pathlib import Path
+from secrets import token_bytes
 from shutil import get_terminal_size
 from subprocess import PIPE, CalledProcessError, Popen
 from sys import executable, stderr as sys_stderr, stdout as sys_stdout
@@ -81,6 +84,12 @@ EMPLOYEE_INFO_EXPECTED_COLUMNS = (
   "Created",
   "Updated",
 )
+
+
+class QueueManager(BaseManager):
+  if TYPE_CHECKING:
+
+    def get_shared_queue(self) -> Queue: ...
 
 
 class ManifestEntry(NamedTuple):
@@ -239,6 +248,19 @@ class TimeclockJob(JobBase):
         dest.write(line)
         dest.flush()
         buf.write(line)
+
+    logger.debug("Launching queue manager for logging")
+
+    key = token_bytes(32)
+
+    manager = QueueManager(address=("127.0.0.1", 50000), authkey=key)
+
+    mp_queue = Queue()
+
+    def _get_shared_queue() -> Queue:
+      return mp_queue
+
+    manager.register("get_shared_queue", callable=_get_shared_queue)
 
     logger.debug("Launching subprocess: %s", exec_args[0])
     stdout_buf = StringIO()
