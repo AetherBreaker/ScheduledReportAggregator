@@ -9,6 +9,7 @@ from re import compile
 from typing import TYPE_CHECKING, TypedDict, override
 
 # Third party imports
+from dateutil.parser import parse
 from dateutil.relativedelta import SA, SU, relativedelta
 from dateutil.rrule import DAILY, rrule
 from pandas import concat, isna, read_csv, to_numeric
@@ -239,15 +240,31 @@ class BalanceSheetJob(JobBase):
       except ValueError:
         logger.warning("No matching files found in %s for FTP %s", file_vars, ftp_key)
         raise CanRescheduleJobError(
-          f"Error in downloading file: missing {ftp_key} file", reason=f"missing {ftp_key} file", count_error=False
+          f"Error in downloading file: missing {ftp_key} file",
+          reason=f"missing {ftp_key} file",
+          count_error=False,
         ) from None
 
-      remote_file = file_vars.pickup_folder / youngest_file.filename
-      local_file = file_vars.local_holding_folder / youngest_file.filename
-      with local_file.open("wb") as file:
-        conn.download_file(remote_path=remote_file.as_posix(), callback=file.write)
+      matched = pattern.match(youngest_file.filename)
+      assert matched is not None
 
-    return local_file
+      timestamp_str = matched.group("timestamp")
+      timestamp = parse(timestamp_str, yearfirst=True, dayfirst=False).replace(tzinfo=SETTINGS.tz)
+
+      if self.check_if_this_week(timestamp):
+        remote_file = file_vars.pickup_folder / youngest_file.filename
+        local_file = file_vars.local_holding_folder / youngest_file.filename
+        logger.debug("Downloading report: %s", youngest_file.filename)
+        with local_file.open("wb") as file:
+          conn.download_file(remote_path=remote_file.as_posix(), callback=file.write)
+        logger.debug("Report downloaded to %s", local_file)
+        return local_file
+
+      else:
+        raise CanRescheduleJobError(
+          f"Balance sheet file {ftp_key} is not from this week. Youngest file timestamp: {timestamp.isoformat()}",
+          count_error=False,
+        ) from None
 
   def download_all_files(self) -> DownloadedFiles:
     downloaded_files: dict[str, Path] = {}
