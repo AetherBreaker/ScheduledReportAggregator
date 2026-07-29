@@ -44,6 +44,7 @@ class Settings(BaseSettings):
   timeclock_font_input_loc: Annotated[Path, Field(alias="TIMECLOCK_FONT_INPUT_LOC")] = persisted_dir_loc / "timeclock_font_input"
 
   allotted_hours_sheet_id: Annotated[str, Field(alias="ALLOTTED_HOURS_SHEET_ID")] = (
+    # "1Fn1FBZZAQwrB6v-wkMGkeIN12Aui7SyZvYpEBvc4Wjk"  # Production sheet ID
     "1XW_SPFAHw9oRCB-a9ppDjh3Ln1sGvvLNrezn4dwPoKg"  # Testing sheet ID
     if __debug__
     else "1Fn1FBZZAQwrB6v-wkMGkeIN12Aui7SyZvYpEBvc4Wjk"  # Production sheet ID

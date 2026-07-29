@@ -5,6 +5,7 @@ if __name__ == "__main__":
   init_logging()
 
 # Standard library imports
+from datetime import timedelta
 from logging import getLogger
 from typing import TYPE_CHECKING, override
 
@@ -21,13 +22,9 @@ from scheduled_report_aggregator.environment_init_vars import SETTINGS
 from scheduled_report_aggregator.jobs.base import JobBase
 
 if TYPE_CHECKING:
-  # Standard library imports
-  from datetime import timedelta
-
   # Third party imports
   from gspread.client import Client
 
-  # First party imports
 
 logger = getLogger(__name__)
 
@@ -42,7 +39,6 @@ class FlipSheetJob(JobBase):
   sheet_tab_allotted_hours_range = "'{sheet_name}'!R2C3:C3"
   sheet_tab_training_range = "'{sheet_name}'!R2C3:C3"
 
-  base_sheet_id: int = 0
   base_sheet_name: str = "Base Sheet"
 
   _spreadsheet_id: str = SETTINGS.allotted_hours_sheet_id
@@ -71,6 +67,12 @@ class FlipSheetJob(JobBase):
 
     spreadsheet_metadata = self.client.http_client.fetch_sheet_metadata(self._spreadsheet_id)
 
+    base_sheet_id: int = next(
+      sheet["properties"]["sheetId"]
+      for sheet in spreadsheet_metadata["sheets"]
+      if sheet["properties"]["title"] == self.base_sheet_name
+    )
+
     hide_sheets = [sheet for sheet in spreadsheet_metadata["sheets"] if sheet["properties"]["title"] not in keep_dates_str]
 
     # self.client.open_by_key(self._spreadsheet_id).sheet1.freeze(1)
@@ -90,7 +92,7 @@ class FlipSheetJob(JobBase):
 
     duplicate_sheet_request = {
       "duplicateSheet": {
-        "sourceSheetId": self.base_sheet_id,
+        "sourceSheetId": base_sheet_id,
         "insertSheetIndex": len(spreadsheet_metadata["sheets"]),
         "newSheetId": new_sheet_id,
         "newSheetName": new_sheet_name,
@@ -140,33 +142,33 @@ class FlipSheetJob(JobBase):
     self.client.http_client.batch_update(self._spreadsheet_id, request_body)
 
 
-# async def main_test():
-#   job = FlipSheetJob()
-#   for idx in range(-2, 1):
-#     await job.main_job(shift=timedelta(weeks=idx))
+async def main_test():
+  job = FlipSheetJob()
+  for idx in range(-3, 1):
+    await job.main_job(shift=timedelta(weeks=idx))
 
 
-# if __name__ == "__main__":
-#   # Third party imports
-#   import winloop as asyncio
+if __name__ == "__main__":
+  # Third party imports
+  import winloop as asyncio
 
-#   # First party imports
-#   # csv_file = CWD / "Time-Clock-Entry-Report_2026-05-14_19-31-12.csv"
-#   # TimeclockJob().run_processor(csv_file)
-#   # from scheduled_report_aggregator.custom_types import DayOfWeek
-#   # from scheduled_report_aggregator.scheduler_config import Scheduler
+  # First party imports
+  # csv_file = CWD / "Time-Clock-Entry-Report_2026-05-14_19-31-12.csv"
+  # TimeclockJob().run_processor(csv_file)
+  # from scheduled_report_aggregator.custom_types import DayOfWeek
+  # from scheduled_report_aggregator.scheduler_config import Scheduler
 
-#   # scheduler = Scheduler.init_scheduler()
+  # scheduler = Scheduler.init_scheduler()
 
-#   job = FlipSheetJob()
-#   # job.init_job(
-#   #   scheduler=scheduler,
-#   #   job_id="test",
-#   #   **CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=9, minute=0, second=0),
-#   # )
+  job = FlipSheetJob()
+  # job.init_job(
+  #   scheduler=scheduler,
+  #   job_id="test",
+  #   **CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=9, minute=0, second=0),
+  # )
 
-#   # result = job.calculate_overunder_hours(job.load_manifest(CWD / "manifest.json"))
-#   # job.send_results(result)
+  # result = job.calculate_overunder_hours(job.load_manifest(CWD / "manifest.json"))
+  # job.send_results(result)
 
-#   asyncio.run(main_test())
-#   pass
+  asyncio.run(main_test())
+  pass
