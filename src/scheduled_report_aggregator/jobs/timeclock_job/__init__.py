@@ -23,6 +23,8 @@ from threading import Thread
 from typing import TYPE_CHECKING, NamedTuple, override
 
 # Third party imports
+from dateutil.relativedelta import relativedelta
+from dateutil.rrule import MO, SU, WEEKLY, rrule
 from google.oauth2.service_account import Credentials
 from gspread.auth import authorize
 from gspread.http_client import BackOffHTTPClient
