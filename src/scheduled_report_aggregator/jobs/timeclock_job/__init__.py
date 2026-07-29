@@ -5,7 +5,6 @@ if __name__ == "__main__":
   init_logging()
 
 # Standard library imports
-import tomllib
 from asyncio import StreamReader, create_subprocess_exec
 from asyncio.tasks import create_task, gather
 from atexit import register
@@ -25,8 +24,6 @@ from sys import executable, stderr as sys_stderr, stdout as sys_stdout
 from typing import TYPE_CHECKING, NamedTuple, TextIO, override
 
 # Third party imports
-from dateutil.relativedelta import relativedelta
-from dateutil.rrule import MO, SU, WEEKLY, rrule
 from google.oauth2.service_account import Credentials
 from gspread.auth import authorize
 from gspread.http_client import BackOffHTTPClient
