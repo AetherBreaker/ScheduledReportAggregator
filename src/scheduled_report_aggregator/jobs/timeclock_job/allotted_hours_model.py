@@ -1,7 +1,18 @@
+# Standard library imports
+from decimal import Decimal
+from typing import Annotated, Any
+
 # Third party imports
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, BeforeValidator, ConfigDict
 
 __all__ = ["AllottedHoursModel"]
+
+
+def zero_if_err(value: Any) -> Decimal | Any:
+  try:
+    return Decimal(value)
+  except Exception:
+    return Decimal(0)
 
 
 class AllottedHoursModel(BaseModel):
@@ -9,3 +20,4 @@ class AllottedHoursModel(BaseModel):
 
   store: int
   allotted_hours: int
+  training_hours: Annotated[Decimal, BeforeValidator(zero_if_err)]

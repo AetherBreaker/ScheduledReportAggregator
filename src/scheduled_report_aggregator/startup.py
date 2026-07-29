@@ -16,6 +16,7 @@ from scheduled_report_aggregator.environment_init_vars import SETTINGS
 from scheduled_report_aggregator.jobs import HOLDING_FOLDER, BalanceSheetJob, TimeclockJob
 from scheduled_report_aggregator.jobs.base import CronArgs
 from scheduled_report_aggregator.jobs.employee_disc_job import EmployeeDiscountsJob
+from scheduled_report_aggregator.jobs.timeclock_job.flip_sheet_job import FlipSheetJob
 from scheduled_report_aggregator.scheduler_config import Scheduler
 
 if TYPE_CHECKING:
@@ -54,6 +55,7 @@ jobs: tuple[tuple[type[JobBase], CronArgs], ...] = (
   (TimeclockJob, CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=9, minute=0, second=0)),
   (BalanceSheetJob, CronArgs(day_of_week=DayOfWeek.WEDNESDAY, hour=7, minute=0, second=0)),
   (EmployeeDiscountsJob, CronArgs(hour=5, minute=0, second=0)),
+  (FlipSheetJob, CronArgs(day_of_week=DayOfWeek.SUNDAY, hour=23, minute=59, second=59)),
 )
 
 
