@@ -5,7 +5,6 @@ if __name__ == "__main__":
   init_logging()
 
 # Standard library imports
-import tomllib
 from asyncio import StreamReader, create_subprocess_exec
 from asyncio.tasks import create_task, gather
 from atexit import register
@@ -25,8 +24,6 @@ from sys import executable, stderr as sys_stderr, stdout as sys_stdout
 from typing import TYPE_CHECKING, NamedTuple, TextIO, override
 
 # Third party imports
-from dateutil.relativedelta import relativedelta
-from dateutil.rrule import MO, SU, WEEKLY, rrule
 from google.oauth2.service_account import Credentials
 from gspread.auth import authorize
 from gspread.http_client import BackOffHTTPClient
@@ -35,10 +32,8 @@ from pandas import notna, read_csv
 
 # First party imports
 from aeth_ext.central_log_server.client import AsyncioQueueDrainer
-from aeth_ext.central_log_server.client.config_provider import query_logging_configs
-from aeth_ext.logging.config.loader import pre_resolve
 from aeth_ext.types import EmailMessageParts
-from aeth_ext.utils import batch_send_emails, prepare_email_message, today
+from aeth_ext.utils import batch_send_emails, prepare_email_message
 from scheduled_report_aggregator.environment_init_vars import CWD, SETTINGS
 from scheduled_report_aggregator.jobs.base import CanRescheduleJobError, JobBase
 from scheduled_report_aggregator.jobs.timeclock_job.allotted_hours_model import AllottedHoursModel
