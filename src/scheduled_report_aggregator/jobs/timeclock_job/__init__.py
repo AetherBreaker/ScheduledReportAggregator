@@ -235,7 +235,7 @@ class TimeclockJob(JobBase):
     overunder_data = self.calculate_overunder_hours(manifest_data)
     logger.info("Over/under calculation complete: %d result(s)", len(overunder_data))
 
-    # self.send_results(overunder_data)
+    self.send_results(overunder_data)
     logger.info("TimeclockJob finished")
 
   async def get_next_timeclock_report(self) -> Path:
