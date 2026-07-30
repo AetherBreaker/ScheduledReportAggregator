@@ -21,7 +21,7 @@ from secrets import token_bytes
 from shutil import get_terminal_size, which
 from subprocess import PIPE, CalledProcessError
 from sys import executable, stderr as sys_stderr, stdout as sys_stdout
-from typing import TYPE_CHECKING, NamedTuple, TextIO, override
+from typing import TYPE_CHECKING, NamedTuple, Self, TextIO, override
 
 # Third party imports
 from dateutil.relativedelta import relativedelta
@@ -41,6 +41,9 @@ from scheduled_report_aggregator.jobs.base import CanRescheduleJobError, JobBase
 from scheduled_report_aggregator.jobs.timeclock_job.allotted_hours_model import AllottedHoursModel
 
 if TYPE_CHECKING:
+  # Standard library imports
+  from types import TracebackType
+
   # Third party imports
   from gspread.client import Client
 
@@ -125,6 +128,13 @@ class QueueManager(BaseManager):
   if TYPE_CHECKING:
 
     def get_shared_queue(self) -> Queue: ...
+
+  async def __aenter__(self) -> Self:
+    self.start()
+    return self
+
+  async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+    self.shutdown()
 
 
 DEFAULT_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -256,14 +266,14 @@ class TimeclockJob(JobBase):
       key.hex(),
     ]
 
+    logger.debug("Launching queue manager for logging")
+
+    manager = QueueManager(address=("127.0.0.1", 50000), authkey=key)
+
     mp_queue = Queue()
 
     def _get_shared_queue() -> Queue:
       return mp_queue
-
-    logger.debug("Launching queue manager for logging")
-
-    manager = QueueManager(address=("127.0.0.1", 50000), authkey=key)
 
     manager.register("get_shared_queue", callable=_get_shared_queue)
 
@@ -277,7 +287,7 @@ class TimeclockJob(JobBase):
 
     log_drainer = AsyncioQueueDrainer(mp_queue, target="timeclock_entry_processor")
 
-    async with log_drainer:
+    async with log_drainer, manager:
       proc = await create_subprocess_exec(*exec_args, cwd=str(TIMECLOCK_PLAYGROUND), stdout=PIPE, stderr=PIPE, env=subprocess_env)
 
       t_out = create_task(_tee(proc.stdout, stdout_buf, sys_stdout))
