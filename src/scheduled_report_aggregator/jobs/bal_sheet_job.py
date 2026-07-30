@@ -9,7 +9,6 @@ from re import compile
 from typing import TYPE_CHECKING, TypedDict, override
 
 # Third party imports
-from dateutil.parser import parse
 from dateutil.relativedelta import SA, SU, relativedelta
 from dateutil.rrule import DAILY, rrule
 from pandas import concat, isna, read_csv, to_numeric
@@ -38,6 +37,7 @@ class FileVars:
   pickup_folder: PurePosixPath
   filename_pattern_factory: Callable[[datetime | None], Pattern[str]]
   local_holding_folder: Path
+  dt_pattern: str
 
   def __post_init__(self) -> None:
     self.local_holding_folder.mkdir(parents=True, exist_ok=True)
@@ -197,11 +197,15 @@ class BalanceSheetJob(JobBase):
         pickup_folder=PurePosixPath("/Accounting"),
         filename_pattern_factory=assemble_ryo_filename_pattern,
         local_holding_folder=self.job_holding_folder / "ryo",
+        # RYO_ACH_Drafts_20260618164600000000.csv
+        dt_pattern="%Y%m%d%H%M%S%f",
       ),
       "sas": FileVars(
         pickup_folder=PurePosixPath("/Outgoing/ach_detail"),
         filename_pattern_factory=assemble_sas_filename_pattern,
         local_holding_folder=self.job_holding_folder / "sas",
+        # Sweet_Fire_2026-06-17T03_31_24.476.csv
+        dt_pattern="%Y-%m-%dT%H_%M_%S.%f",
       ),
     }
     self.job_output_folder = self.job_holding_folder / "output"
@@ -249,7 +253,7 @@ class BalanceSheetJob(JobBase):
       assert matched is not None
 
       timestamp_str = matched.group("timestamp")
-      timestamp = parse(timestamp_str, yearfirst=True, dayfirst=False).replace(tzinfo=SETTINGS.tz)
+      timestamp = datetime.strptime(timestamp_str, file_vars.dt_pattern).replace(tzinfo=SETTINGS.tz)
 
       if self.check_if_this_week(timestamp):
         remote_file = file_vars.pickup_folder / youngest_file.filename
