@@ -88,12 +88,6 @@ EMPLOYEE_INFO_EXPECTED_COLUMNS = (
 )
 
 
-class QueueManager(BaseManager):
-  if TYPE_CHECKING:
-
-    def get_shared_queue(self) -> Queue: ...
-
-
 class ManifestEntry(NamedTuple):
   csv: Path
   pdf: Path
@@ -118,6 +112,12 @@ async def _tee(src: StreamReader | None, buf: StringIO, dest: TextIO) -> None:
     dest.write(decoded)
     dest.flush()
     buf.write(decoded)
+
+
+class QueueManager(BaseManager):
+  if TYPE_CHECKING:
+
+    def get_shared_queue(self) -> Queue: ...
 
 
 class StoreHoursData(NamedTuple):
