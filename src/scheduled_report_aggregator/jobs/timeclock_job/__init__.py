@@ -541,34 +541,35 @@ class TimeclockJob(JobBase):
     logger.info("TimeclockJob finished")
 
 
-# if __name__ == "__main__":
-# Third party imports
-# import winloop as asyncio
+if __name__ == "__main__":
+  # Third party imports
+  import winloop as asyncio
 
-# First party imports
-# csv_file = CWD / "Time-Clock-Entry-Report_2026-05-14_19-31-12.csv"
-# TimeclockJob().run_processor(csv_file)
-# from scheduled_report_aggregator.custom_types import DayOfWeek
-# from scheduled_report_aggregator.scheduler_config import Scheduler
+  # First party imports
+  # csv_file = CWD / "Time-Clock-Entry-Report_2026-05-14_19-31-12.csv"
+  # TimeclockJob().run_processor(csv_file)
+  # from scheduled_report_aggregator.custom_types import DayOfWeek
+  # from scheduled_report_aggregator.scheduler_config import Scheduler
 
-# scheduler = Scheduler.init_scheduler()
+  # scheduler = Scheduler.init_scheduler()
 
-# job = TimeclockJob()
-# job.init_job(
-#   scheduler=scheduler,
-#   job_id="test",
-#   **CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=9, minute=0, second=0),
-# )
+  job = TimeclockJob()
+  # job.init_job(
+  #   scheduler=scheduler,
+  #   job_id="test",
+  #   **CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=9, minute=0, second=0),
+  # )
 
-# result = job.calculate_overunder_hours(job.load_manifest(CWD / "manifest.json"))
-# job.send_results(result)
+  # result = job.calculate_overunder_hours(job.load_manifest(CWD / "manifest.json"))
+  # job.send_results(result)
 
-# job.get_allotted_hours([date(2026, 7, 26)])
+  # job.get_allotted_hours([date(2026, 7, 26)])
 
-# inp_file = CWD / "example files" / "Automated-Schedule-Report_2026-07-07_12-00-28.csv"
+  asyncio.run(job.main_job())
+  # inp_file = CWD / "example files" / "Automated-Schedule-Report_2026-07-07_12-00-28.csv"
 
-# asyncio.run(job.test_job_specific_file(inp_file))
-# job.test_last_run()
-# asyncio.run(
-#   job.run_processor(CWD / "file_holding" / "timeclockjob" / "schedule_reports" / "Automated-Schedule-Report_2026-07-28_12-02-37.csv")
-# )
+  # asyncio.run(job.test_job_specific_file(inp_file))
+  # job.test_last_run()
+  # asyncio.run(
+  #   job.run_processor(CWD / "file_holding" / "timeclockjob" / "schedule_reports" / "Automated-Schedule-Report_2026-07-28_12-02-37.csv")
+  # )
