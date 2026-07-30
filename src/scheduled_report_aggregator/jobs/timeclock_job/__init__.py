@@ -124,17 +124,41 @@ async def _tee(src: StreamReader | None, buf: StringIO, dest: TextIO) -> None:
     buf.write(decoded)
 
 
+_mp_queue: Queue | None = None
+
+
+def _init_shared_queue(queue: Queue) -> None:
+  # Runs inside the spawned manager server process to bind its own module-level
+  # _mp_queue, since the parent process's global does not propagate to it.
+  global _mp_queue
+  _mp_queue = queue
+
+
 class QueueManager(BaseManager):
   if TYPE_CHECKING:
 
     def get_shared_queue(self) -> Queue: ...
 
   async def __aenter__(self) -> Self:
-    self.start()
+    global _mp_queue
+    _mp_queue = Queue()
+    self.start(initializer=_init_shared_queue, initargs=(_mp_queue,))
+
     return self
 
   async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+    global _mp_queue
     self.shutdown()
+    if _mp_queue is not None:
+      _mp_queue.close()
+      _mp_queue.join_thread()
+      _mp_queue = None
+
+
+def get_shared_queue() -> Queue:
+  if _mp_queue is None:
+    raise RuntimeError("Shared queue has not been initialized")
+  return _mp_queue
 
 
 DEFAULT_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -211,7 +235,7 @@ class TimeclockJob(JobBase):
     overunder_data = self.calculate_overunder_hours(manifest_data)
     logger.info("Over/under calculation complete: %d result(s)", len(overunder_data))
 
-    self.send_results(overunder_data)
+    # self.send_results(overunder_data)
     logger.info("TimeclockJob finished")
 
   async def get_next_timeclock_report(self) -> Path:
@@ -270,12 +294,7 @@ class TimeclockJob(JobBase):
 
     manager = QueueManager(address=("127.0.0.1", 50000), authkey=key)
 
-    mp_queue = Queue()
-
-    def _get_shared_queue() -> Queue:
-      return mp_queue
-
-    manager.register("get_shared_queue", callable=_get_shared_queue)
+    manager.register("get_shared_queue", callable=get_shared_queue)
 
     logger.debug("Launching subprocess: %s", exec_args[0])
     stdout_buf = StringIO()
@@ -285,17 +304,16 @@ class TimeclockJob(JobBase):
 
     logger.debug("Launching subprocess: %s", exec_args[0])
 
-    log_drainer = AsyncioQueueDrainer(mp_queue, target="timeclock_entry_processor")
+    async with manager:  # noqa: SIM117
+      async with AsyncioQueueDrainer(get_shared_queue(), target="timeclock_entry_processor"):
+        proc = await create_subprocess_exec(*exec_args, cwd=str(TIMECLOCK_PLAYGROUND), stdout=PIPE, stderr=PIPE, env=subprocess_env)
 
-    async with log_drainer, manager:
-      proc = await create_subprocess_exec(*exec_args, cwd=str(TIMECLOCK_PLAYGROUND), stdout=PIPE, stderr=PIPE, env=subprocess_env)
+        t_out = create_task(_tee(proc.stdout, stdout_buf, sys_stdout))
+        t_err = create_task(_tee(proc.stderr, stderr_buf, sys_stderr))
 
-      t_out = create_task(_tee(proc.stdout, stdout_buf, sys_stdout))
-      t_err = create_task(_tee(proc.stderr, stderr_buf, sys_stderr))
+        await gather(t_out, t_err)
 
-      await gather(t_out, t_err)
-
-      returncode = await proc.wait()
+        returncode = await proc.wait()
 
     captured_stdout = stdout_buf.getvalue()
     captured_stderr = stderr_buf.getvalue()
@@ -371,7 +389,7 @@ class TimeclockJob(JobBase):
           validated_row = AllottedHoursModel.model_validate(
             {"store": store[0], "allotted_hours": allotted_hrs[0], "training_hours": training_hrs[0]}
           )
-        except Exception:
+        except Exception:  # noqa: BLE001
           if allotted_hrs and allotted_hrs[0]:
             logger.warning(
               "Skipping row with invalid data in allotted hours sheet '%s' for store '%s'",
