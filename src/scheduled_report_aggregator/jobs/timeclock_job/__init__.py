@@ -24,6 +24,8 @@ from sys import executable, stderr as sys_stderr, stdout as sys_stdout
 from typing import TYPE_CHECKING, NamedTuple, TextIO, override
 
 # Third party imports
+from dateutil.relativedelta import relativedelta
+from dateutil.rrule import MO, SU, WEEKLY, rrule
 from google.oauth2.service_account import Credentials
 from gspread.auth import authorize
 from gspread.http_client import BackOffHTTPClient
@@ -104,6 +106,11 @@ class OverUnderEntry(NamedTuple):
   csv_path: Path
 
 
+class StoreHoursData(NamedTuple):
+  allotted_hours: int
+  training_hours_used: Decimal
+
+
 async def _tee(src: StreamReader | None, buf: StringIO, dest: TextIO) -> None:
   if src is None:
     raise RuntimeError("Subprocess stdout or stderr is None; cannot tee output")
@@ -118,11 +125,6 @@ class QueueManager(BaseManager):
   if TYPE_CHECKING:
 
     def get_shared_queue(self) -> Queue: ...
-
-
-class StoreHoursData(NamedTuple):
-  allotted_hours: int
-  training_hours_used: Decimal
 
 
 DEFAULT_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
