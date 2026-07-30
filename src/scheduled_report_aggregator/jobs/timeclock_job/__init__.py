@@ -5,19 +5,23 @@ if __name__ == "__main__":
   init_logging()
 
 # Standard library imports
+from asyncio import StreamReader, create_subprocess_exec
+from asyncio.tasks import create_task, gather
 from atexit import register
 from datetime import date
 from decimal import Decimal
-from io import StringIO, TextIOWrapper
+from io import StringIO
 from json import load
 from logging import getLogger
+from multiprocessing import Queue
+from multiprocessing.managers import BaseManager
 from os import environ
 from pathlib import Path
-from shutil import get_terminal_size
-from subprocess import PIPE, CalledProcessError, Popen
+from secrets import token_bytes
+from shutil import get_terminal_size, which
+from subprocess import PIPE, CalledProcessError
 from sys import executable, stderr as sys_stderr, stdout as sys_stdout
-from threading import Thread
-from typing import TYPE_CHECKING, NamedTuple, override
+from typing import TYPE_CHECKING, NamedTuple, Self, TextIO, override
 
 # Third party imports
 from dateutil.relativedelta import relativedelta
@@ -29,6 +33,7 @@ from gspread.utils import DateTimeOption, Dimension, ValueRenderOption
 from pandas import notna, read_csv
 
 # First party imports
+from aeth_ext.central_log_server.client import AsyncioQueueDrainer
 from aeth_ext.types import EmailMessageParts
 from aeth_ext.utils import batch_send_emails, prepare_email_message
 from scheduled_report_aggregator.environment_init_vars import CWD, SETTINGS
@@ -36,6 +41,9 @@ from scheduled_report_aggregator.jobs.base import CanRescheduleJobError, JobBase
 from scheduled_report_aggregator.jobs.timeclock_job.allotted_hours_model import AllottedHoursModel
 
 if TYPE_CHECKING:
+  # Standard library imports
+  from types import TracebackType
+
   # Third party imports
   from gspread.client import Client
 
@@ -106,6 +114,53 @@ class StoreHoursData(NamedTuple):
   training_hours_used: Decimal
 
 
+async def _tee(src: StreamReader | None, buf: StringIO, dest: TextIO) -> None:
+  if src is None:
+    raise RuntimeError("Subprocess stdout or stderr is None; cannot tee output")
+  async for line in src:
+    decoded = line.decode()
+    dest.write(decoded)
+    dest.flush()
+    buf.write(decoded)
+
+
+_mp_queue: Queue | None = None
+
+
+def _init_shared_queue(queue: Queue) -> None:
+  # Runs inside the spawned manager server process to bind its own module-level
+  # _mp_queue, since the parent process's global does not propagate to it.
+  global _mp_queue
+  _mp_queue = queue
+
+
+class QueueManager(BaseManager):
+  if TYPE_CHECKING:
+
+    def get_shared_queue(self) -> Queue: ...
+
+  async def __aenter__(self) -> Self:
+    global _mp_queue
+    _mp_queue = Queue()
+    self.start(initializer=_init_shared_queue, initargs=(_mp_queue,))
+
+    return self
+
+  async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+    global _mp_queue
+    self.shutdown()
+    if _mp_queue is not None:
+      _mp_queue.close()
+      _mp_queue.join_thread()
+      _mp_queue = None
+
+
+def get_shared_queue() -> Queue:
+  if _mp_queue is None:
+    raise RuntimeError("Shared queue has not been initialized")
+  return _mp_queue
+
+
 DEFAULT_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 
@@ -172,7 +227,7 @@ class TimeclockJob(JobBase):
     next_report = await self.get_next_timeclock_report()
     logger.info("Schedule report acquired: %s", next_report.name)
 
-    manifest_data = self.run_processor(next_report)
+    manifest_data = await self.run_processor(next_report)
     store_count = len(manifest_data)
     week_count = sum(len(weeks) for weeks in manifest_data.values())
     logger.info("Processor complete: %d store(s), %d week(s) total", store_count, week_count)
@@ -180,7 +235,7 @@ class TimeclockJob(JobBase):
     overunder_data = self.calculate_overunder_hours(manifest_data)
     logger.info("Over/under calculation complete: %d result(s)", len(overunder_data))
 
-    self.send_results(overunder_data)
+    # self.send_results(overunder_data)
     logger.info("TimeclockJob finished")
 
   async def get_next_timeclock_report(self) -> Path:
@@ -214,59 +269,55 @@ class TimeclockJob(JobBase):
           count_error=False,
         ) from None
 
-  def run_processor(self, csv_file: Path) -> dict[StoreNum, dict[date, ManifestEntry]]:
+  async def run_processor(self, csv_file: Path) -> dict[StoreNum, dict[date, ManifestEntry]]:
     # Run timeclock_entry_processor as a subprocess via its CLI.
     logger.info("Running timeclock_entry_processor on %s", csv_file.name)
 
     self.manifest_path.touch(exist_ok=True)
     self.manifest_path.write_text("")  # ensure manifest is empty before processing
 
-    if __debug__:
-      exec_args = [
-        executable,
-        "-c",
-        ";".join(  # noqa: FLY002
-          [
-            "import runpy, sys",
-            "sys.argv[0] = 'timeclock_entry_processor'",
-            "runpy.run_module('timeclock_entry_processor', run_name='__main__', alter_sys=True)",
-          ]
-        ),
-        str(csv_file),
-        str(self.manifest_path),
-        str(self.output_folder),
-      ]
-    else:
-      exec_args = [
-        executable,
-        "-m",
-        "timeclock_entry_processor",
-        str(csv_file),
-        str(self.manifest_path),
-        str(self.output_folder),
-      ]
+    timeclock_exec = which("timeclock-entry-processor", path=str(Path(executable).parent))
+    if timeclock_exec is None:
+      raise FileNotFoundError("timeclock-entry-processor not found in venv scripts directory")
 
-    def _tee(src: TextIOWrapper, buf: StringIO, dest: TextIOWrapper) -> None:
-      for line in src:
-        dest.write(line)
-        dest.flush()
-        buf.write(line)
+    key = token_bytes(32)
+
+    exec_args = [
+      timeclock_exec,
+      str(csv_file),
+      str(self.manifest_path),
+      str(self.output_folder),
+      key.hex(),
+    ]
+
+    logger.debug("Launching queue manager for logging")
+
+    manager = QueueManager(address=("127.0.0.1", 50000), authkey=key)
+
+    manager.register("get_shared_queue", callable=get_shared_queue)
 
     logger.debug("Launching subprocess: %s", exec_args[0])
     stdout_buf = StringIO()
     stderr_buf = StringIO()
     subprocess_env = environ.copy()
     subprocess_env["COLUMNS"] = str(get_terminal_size().columns)
-    with Popen(exec_args, cwd=str(TIMECLOCK_PLAYGROUND), stdout=PIPE, stderr=PIPE, text=True, env=subprocess_env) as proc:
-      t_out = Thread(target=_tee, args=(proc.stdout, stdout_buf, sys_stdout), daemon=True)
-      t_err = Thread(target=_tee, args=(proc.stderr, stderr_buf, sys_stderr), daemon=True)
-      t_out.start()
-      t_err.start()
-      t_out.join()
-      t_err.join()
-      returncode = proc.wait()
+
+    logger.debug("Launching subprocess: %s", exec_args[0])
+
+    async with manager:  # noqa: SIM117
+      async with AsyncioQueueDrainer(get_shared_queue(), target="timeclock_entry_processor"):
+        proc = await create_subprocess_exec(*exec_args, cwd=str(TIMECLOCK_PLAYGROUND), stdout=PIPE, stderr=PIPE, env=subprocess_env)
+
+        t_out = create_task(_tee(proc.stdout, stdout_buf, sys_stdout))
+        t_err = create_task(_tee(proc.stderr, stderr_buf, sys_stderr))
+
+        await gather(t_out, t_err)
+
+        returncode = await proc.wait()
+
     captured_stdout = stdout_buf.getvalue()
     captured_stderr = stderr_buf.getvalue()
+
     logger.debug("Subprocess exited with code %d", returncode)
     if returncode != 0:
       if captured_stderr:
@@ -338,7 +389,7 @@ class TimeclockJob(JobBase):
           validated_row = AllottedHoursModel.model_validate(
             {"store": store[0], "allotted_hours": allotted_hrs[0], "training_hours": training_hrs[0]}
           )
-        except Exception:
+        except Exception:  # noqa: BLE001
           if allotted_hrs and allotted_hrs[0]:
             logger.warning(
               "Skipping row with invalid data in allotted hours sheet '%s' for store '%s'",
@@ -514,7 +565,7 @@ class TimeclockJob(JobBase):
     logger.info("TimeclockJob starting")
     logger.info("TimeclockJob starting with file: %s", file.name)
 
-    manifest_data = self.run_processor(file)
+    manifest_data = await self.run_processor(file)
 
     store_count = len(manifest_data)
     week_count = sum(len(weeks) for weeks in manifest_data.values())
