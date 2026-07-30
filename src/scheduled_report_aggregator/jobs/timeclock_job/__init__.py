@@ -242,18 +242,18 @@ class TimeclockJob(JobBase):
     self.manifest_path.touch(exist_ok=True)
     self.manifest_path.write_text("")  # ensure manifest is empty before processing
 
-    key = token_bytes(32)
-
     timeclock_exec = which("timeclock-entry-processor", path=str(Path(executable).parent))
     if timeclock_exec is None:
       raise FileNotFoundError("timeclock-entry-processor not found in venv scripts directory")
+
+    key = token_bytes(32)
 
     exec_args = [
       timeclock_exec,
       str(csv_file),
       str(self.manifest_path),
       str(self.output_folder),
-      key.decode("utf-8"),
+      key.hex(),
     ]
 
     mp_queue = Queue()
