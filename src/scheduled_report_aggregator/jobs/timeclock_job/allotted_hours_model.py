@@ -11,7 +11,7 @@ __all__ = ["AllottedHoursModel"]
 def zero_if_err(value: Any) -> Decimal | Any:
   try:
     return Decimal(value)
-  except Exception:
+  except Exception:  # noqa: BLE001
     return Decimal(0)
 
 

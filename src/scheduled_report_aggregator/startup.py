@@ -40,8 +40,8 @@ if not __debug__:
     """Write current timestamp to heartbeat file for health monitoring."""
     try:
       HEARTBEAT_FILE.write_text(datetime.now(SETTINGS.tz).isoformat())
-    except Exception as e:
-      logger.error("Failed to write heartbeat: %s", e)
+    except Exception:
+      logger.exception("Failed to write heartbeat")
 else:
 
   def write_heartbeat():

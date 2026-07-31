@@ -320,6 +320,7 @@ class JobBase(metaclass=SingletonTypeABC):
         second="second" in trigger_args and trigger_args["second"] is not None,
       )
     except Exception:
+      logger.exception("Failed to extract use_args from trigger_args. Defaulting to DEFAULT_USE_ARGS.")
       return DEFAULT_USE_ARGS
 
   def shift_cron_args(self, args: CronArgs, delta: timedelta | relativedelta, use_args: UseArgs | None = None) -> CronArgs:

@@ -389,12 +389,20 @@ class TimeclockJob(JobBase):
           validated_row = AllottedHoursModel.model_validate(
             {"store": store[0], "allotted_hours": allotted_hrs[0], "training_hours": training_hrs[0]}
           )
-        except Exception:  # noqa: BLE001
+        except Exception:
           if allotted_hrs and allotted_hrs[0]:
             logger.warning(
               "Skipping row with invalid data in allotted hours sheet '%s' for store '%s'",
               sheet_tab_name,
               store[0] if store else "Unknown",
+            )
+          else:
+            logger.exception(
+              "Error validating allotted hours row for week ending %s: store=%s, allotted_hours=%s, training_hours=%s",
+              week_ending,
+              store,
+              allotted_hrs,
+              training_hrs,
             )
           continue
         allotted_hours[validated_row.store] = StoreHoursData(
