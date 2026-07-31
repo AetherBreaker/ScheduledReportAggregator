@@ -1,6 +1,6 @@
 [project]
   name            = "scheduled-report-aggregator"
-  version         = "2.3.1"
+  version         = "2.3.2"
   description     = "Add your description here"
   requires-python = ">=3.14"
   dependencies    = [
@@ -13,7 +13,7 @@
     "pydantic-settings>=2.14.1",
     "python-dateutil>=2.9.0.post0",
     "rich>=15.0.0",
-    "timeclock-entry-processor>=1.9.1",
+    "timeclock-entry-processor>=1.10.1",
   ]
 
   [project.scripts]
