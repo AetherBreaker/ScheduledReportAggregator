@@ -14,7 +14,7 @@ supported-markers = [
 
 [[package]]
 name = "aeth-ext"
-version = "5.2.0"
+version = "6.0.1"
 source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'linux'",
@@ -31,9 +31,9 @@ dependencies = [
     { name = "tzdata", marker = "sys_platform == 'linux'" },
     { name = "watchfiles", marker = "sys_platform == 'linux'" },
 ]
-sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/3ac/c3d560685980b/aeth_ext-5.2.0.tar.gz", hash = "sha256:3acc3d560685980b3d2d02ba7e42bbdcc06083bde239bff914861822ca1e72ea" }
+sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/8ae/4c1967ff2c7ed/aeth_ext-6.0.1.tar.gz", hash = "sha256:8ae4c1967ff2c7edc553f695ff18259dd256ad36d5eba94d2c38b2169ddf40ab" }
 wheels = [
-    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/35e/706b24665af44/aeth_ext-5.2.0-py3-none-any.whl", hash = "sha256:35e706b24665af441fb53551fcd0ac843d5d96cc22d5747b8a994b2a7d84d1f7" },
+    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/c8d/9340a9800f55f/aeth_ext-6.0.1-py3-none-any.whl", hash = "sha256:c8d9340a9800f55f9a1a12e4aa4119f4221975afc2a305c6e6464615ddec9b99" },
 ]
 
 [package.optional-dependencies]
@@ -46,7 +46,7 @@ sftp = [
 
 [[package]]
 name = "aeth-ext"
-version = "5.2.0"
+version = "6.0.1"
 source = { editable = "../aeth_ext" }
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'win32'",
@@ -1259,11 +1259,11 @@ wheels = [
 
 [[package]]
 name = "scheduled-report-aggregator"
-version = "2.3.0"
+version = "2.3.1"
 source = { editable = "." }
 dependencies = [
-    { name = "aeth-ext", version = "5.2.0", source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }, extra = ["async", "sftp"], marker = "sys_platform == 'linux'" },
-    { name = "aeth-ext", version = "5.2.0", source = { editable = "../aeth_ext" }, extra = ["async", "sftp"], marker = "sys_platform == 'win32'" },
+    { name = "aeth-ext", version = "6.0.1", source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }, extra = ["async", "sftp"], marker = "sys_platform == 'linux'" },
+    { name = "aeth-ext", version = "6.0.1", source = { editable = "../aeth_ext" }, extra = ["async", "sftp"], marker = "sys_platform == 'win32'" },
     { name = "aiologic", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "apscheduler", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "gspread", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
@@ -1272,8 +1272,8 @@ dependencies = [
     { name = "pydantic-settings", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "python-dateutil", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "rich", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-    { name = "timeclock-entry-processor", version = "1.9.1", source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }, marker = "sys_platform == 'linux'" },
-    { name = "timeclock-entry-processor", version = "1.9.1", source = { editable = "../timeclock_entry_processor" }, marker = "sys_platform == 'win32'" },
+    { name = "timeclock-entry-processor", version = "1.10.0", source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }, marker = "sys_platform == 'linux'" },
+    { name = "timeclock-entry-processor", version = "1.10.0", source = { editable = "../timeclock_entry_processor" }, marker = "sys_platform == 'win32'" },
 ]
 
 [package.dev-dependencies]
@@ -1343,14 +1343,14 @@ wheels = [
 
 [[package]]
 name = "timeclock-entry-processor"
-version = "1.9.1"
+version = "1.10.0"
 source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'linux'",
     "python_full_version < '3.15' and sys_platform == 'linux'",
 ]
 dependencies = [
-    { name = "aeth-ext", version = "5.2.0", source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }, marker = "sys_platform == 'linux'" },
+    { name = "aeth-ext", version = "6.0.1", source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }, marker = "sys_platform == 'linux'" },
     { name = "aiologic", marker = "sys_platform == 'linux'" },
     { name = "fpdf2", marker = "sys_platform == 'linux'" },
     { name = "pandas", extra = ["performance"], marker = "sys_platform == 'linux'" },
@@ -1361,21 +1361,21 @@ dependencies = [
     { name = "tzdata", marker = "sys_platform == 'linux'" },
     { name = "uvloop", marker = "sys_platform == 'linux'" },
 ]
-sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/883/93f06afbb6098/timeclock_entry_processor-1.9.1.tar.gz", hash = "sha256:88393f06afbb6098007002fb857f744aa51f60d62706ddfffcbc80e29bcc8bfe" }
+sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/64e/62a530f88802a/timeclock_entry_processor-1.10.0.tar.gz", hash = "sha256:64e62a530f88802a0477eb73b75cf85add076663687902a8ad93a71b9fb375a6" }
 wheels = [
-    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/0c4/cd28715c39735/timeclock_entry_processor-1.9.1-py3-none-any.whl", hash = "sha256:0c4cd28715c397350bf78704953db7e3d6fffacbfa7afede478d292cc112fba5" },
+    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/2ad/260a0cc82b7a8/timeclock_entry_processor-1.10.0-py3-none-any.whl", hash = "sha256:2ad260a0cc82b7a81f008ffd12587bac40c9b65de0ab4ab3dd317fc1b661ada3" },
 ]
 
 [[package]]
 name = "timeclock-entry-processor"
-version = "1.9.1"
+version = "1.10.0"
 source = { editable = "../timeclock_entry_processor" }
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'win32'",
     "python_full_version < '3.15' and sys_platform == 'win32'",
 ]
 dependencies = [
-    { name = "aeth-ext", version = "5.2.0", source = { editable = "../aeth_ext" }, marker = "sys_platform == 'win32'" },
+    { name = "aeth-ext", version = "6.0.1", source = { editable = "../aeth_ext" }, marker = "sys_platform == 'win32'" },
     { name = "aiologic", marker = "sys_platform == 'win32'" },
     { name = "fpdf2", marker = "sys_platform == 'win32'" },
     { name = "pandas", extra = ["performance"], marker = "sys_platform == 'win32'" },
