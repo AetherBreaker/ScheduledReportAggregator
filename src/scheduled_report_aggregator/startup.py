@@ -1,7 +1,7 @@
 # Standard library imports
 import sys
-from asyncio import run, sleep
-from datetime import datetime
+from asyncio import CancelledError, create_task, run, sleep
+from contextlib import suppress
 from logging import getLogger
 from typing import TYPE_CHECKING
 
@@ -11,6 +11,7 @@ from rich import get_console
 
 # First party imports
 from aeth_ext.errors.err_handling import FATAL_EVENT
+from aeth_ext.monitoring import run_heartbeat_async
 from scheduled_report_aggregator.custom_types import DayOfWeek
 from scheduled_report_aggregator.environment_init_vars import SETTINGS
 from scheduled_report_aggregator.jobs import HOLDING_FOLDER, BalanceSheetJob, TimeclockJob
@@ -32,20 +33,7 @@ logger = getLogger(__name__)
 
 RICH_CONSOLE = get_console()
 
-if not __debug__:
-  # Heartbeat file for health checks
-  HEARTBEAT_FILE = SETTINGS.log_loc_folder / "heartbeat.txt"
-
-  def write_heartbeat():
-    """Write current timestamp to heartbeat file for health monitoring."""
-    try:
-      HEARTBEAT_FILE.write_text(datetime.now(SETTINGS.tz).isoformat())
-    except Exception:
-      logger.exception("Failed to write heartbeat")
-else:
-
-  def write_heartbeat():
-    pass
+HEARTBEAT_FILE = SETTINGS.log_loc_folder / "heartbeat.txt"
 
 
 scheduler = Scheduler.init_scheduler()
@@ -80,24 +68,26 @@ async def reschedule_jobs() -> None:
 async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
   HOLDING_FOLDER.mkdir(exist_ok=True)
   RICH_CONSOLE.rule("[bold red]Booting...[/]", style="bold red")
-  # scheduler.add_job(
-  #   scheduler.print_jobs,
-  #   CronTrigger(minute="*/1"),
-  #   id="print_jobs",
-  #   replace_existing=True,
-  #   jobstore="system_jobs",
-  # )
+
+  periodic_heartbeat_task = create_task(
+    run_heartbeat_async(
+      HEARTBEAT_FILE,
+      ping_url=SETTINGS.alerts_healthcheck_ping_url,
+      pingkey=SETTINGS.alerts_healthcheck_pingkey,
+      tz=SETTINGS.tz,
+    )
+  )
 
   await reschedule_jobs()  # Schedule all jobs on startup
 
-  # Heartbeat job - writes timestamp every minute for health monitoring
-  scheduler.add_job(
-    write_heartbeat,
-    CronTrigger(minute="*/1"),
-    id="heartbeat",
-    replace_existing=True,
-    jobstore="system_jobs",
-  )
+  # # Heartbeat job - writes timestamp every minute for health monitoring
+  # scheduler.add_job(
+  #   write_heartbeat,
+  #   CronTrigger(minute="*/1"),
+  #   id="heartbeat",
+  #   replace_existing=True,
+  #   jobstore="system_jobs",
+  # )
 
   scheduler.add_job(
     reschedule_jobs,
@@ -114,9 +104,6 @@ async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
 
   scheduler.start()
 
-  # Write initial heartbeat on startup
-  write_heartbeat()
-
   scheduler.print_jobs()
 
   # job = TimeclockJob.init_job(
@@ -129,11 +116,14 @@ async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
   if __debug__:
     for job_cls, _ in jobs:
       await job_cls().main_job()  # Run each job once immediately in debug mode for testing
-    pass
 
   RICH_CONSOLE.rule("[bold red]Boot Done[/]", style="bold red")
   # with RICH_CONSOLE.status("Application is running."):
   await FATAL_EVENT
+
+  periodic_heartbeat_task.cancel()
+  with suppress(CancelledError):
+    await periodic_heartbeat_task
 
   if any(job.errored for job, _ in jobs):
     await sleep(
