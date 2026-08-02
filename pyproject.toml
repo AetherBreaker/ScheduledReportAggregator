@@ -1,6 +1,6 @@
 [project]
   name            = "scheduled-report-aggregator"
-  version         = "2.3.2"
+  version         = "2.4.0"
   description     = "Add your description here"
   requires-python = ">=3.14"
   dependencies    = [
