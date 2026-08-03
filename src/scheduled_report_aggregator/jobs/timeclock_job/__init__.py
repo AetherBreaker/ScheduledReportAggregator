@@ -517,12 +517,13 @@ class TimeclockJob(JobBase):
         f"  {over_under_str} Hours: {abs(over_under_hours)}\n"
       )
 
+      assert isinstance(SETTINGS.alerts_email, str), "SETTINGS.alerts_email must be a string"
       emails_to_send.append(
         prepare_email_message(
           EmailMessageParts(
             subject=f"SFT{store:0>3} - Store {over_under_str} Allotted Hours by {abs(over_under_hours): >5} for Week Ending {week_ending.isoformat()}",
             body=message,
-            from_addr=SETTINGS.alerts_email,
+            from_addr=("SFT Bot", None, None, SETTINGS.alerts_email),
             to_addrs=self.email_recipients,
             attachments=[pdf_path, csv_path],
           )
