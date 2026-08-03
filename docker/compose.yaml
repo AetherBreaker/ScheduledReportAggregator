@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile
       args:
-        GIT_TAG: v2.4.1
+        GIT_TAG: v2.4.2
         GIT_REPO: https://github.com/AetherBreaker/ScheduledReportAggregator.git
     restart: no
     volumes:
