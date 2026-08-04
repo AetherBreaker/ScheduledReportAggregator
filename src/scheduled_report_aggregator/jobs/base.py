@@ -248,10 +248,13 @@ class JobBase(metaclass=SingletonTypeABC):
           self.errored = True
           FATAL_EVENT.set()  # trigger shutdown in main
 
-        except Exception as e:
-          logger.exception("%s: Unexpected error in main_job:", self.__class__.__name__, exc_info=e)
+        except Exception:
+          # Anything beyond CanRescheduleJobError/JobError is unexpected: mark
+          # the job errored and defer to aeth_ext's handle_fatal_exc_sync (wired
+          # up on the executor's future callback in scheduler_config.py) for
+          # logging, alerting, and setting FATAL_EVENT.
           self.errored = True
-          FATAL_EVENT.set()  # trigger shutdown in main
+          raise
 
     return wrapper
 
