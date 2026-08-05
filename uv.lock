@@ -47,7 +47,7 @@ sftp = [
 
 [[package]]
 name = "aeth-ext"
-version = "6.2.3"
+version = "6.3.0"
 source = { editable = "../aeth_ext" }
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'win32'",
@@ -1299,11 +1299,11 @@ wheels = [
 
 [[package]]
 name = "scheduled-report-aggregator"
-version = "2.4.3"
+version = "2.4.4"
 source = { editable = "." }
 dependencies = [
     { name = "aeth-ext", version = "6.2.3", source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }, extra = ["async", "sftp"], marker = "sys_platform == 'linux'" },
-    { name = "aeth-ext", version = "6.2.3", source = { editable = "../aeth_ext" }, extra = ["async", "sftp"], marker = "sys_platform == 'win32'" },
+    { name = "aeth-ext", version = "6.3.0", source = { editable = "../aeth_ext" }, extra = ["async", "sftp"], marker = "sys_platform == 'win32'" },
     { name = "aiologic", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "apscheduler", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "gspread", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
@@ -1415,7 +1415,7 @@ resolution-markers = [
     "python_full_version < '3.15' and sys_platform == 'win32'",
 ]
 dependencies = [
-    { name = "aeth-ext", version = "6.2.3", source = { editable = "../aeth_ext" }, marker = "sys_platform == 'win32'" },
+    { name = "aeth-ext", version = "6.3.0", source = { editable = "../aeth_ext" }, marker = "sys_platform == 'win32'" },
     { name = "aiologic", marker = "sys_platform == 'win32'" },
     { name = "fpdf2", marker = "sys_platform == 'win32'" },
     { name = "pandas", extra = ["performance"], marker = "sys_platform == 'win32'" },
