@@ -40,7 +40,7 @@ scheduler = Scheduler.init_scheduler()
 
 
 jobs: tuple[tuple[type[JobBase], CronArgs], ...] = (
-  (TimeclockJob, CronArgs(day_of_week=DayOfWeek.TUESDAY, hour=9, minute=0, second=0)),
+  (TimeclockJob, CronArgs(day_of_week=DayOfWeek.THURSDAY, hour=14, minute=0, second=0)),
   (BalanceSheetJob, CronArgs(day_of_week=DayOfWeek.WEDNESDAY, hour=7, minute=0, second=0)),
   (EmployeeDiscountsJob, CronArgs(hour=5, minute=0, second=0)),
   (FlipSheetJob, CronArgs(day_of_week=DayOfWeek.SUNDAY, hour=23, minute=59, second=59)),
