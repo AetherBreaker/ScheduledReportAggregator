@@ -1,0 +1,1 @@
+1. update timeclock job to detect when a store has no allocated hours set so it can change the phrasing used in the alert email to be less alarming.
