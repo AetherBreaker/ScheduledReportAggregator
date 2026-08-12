@@ -97,15 +97,17 @@
     #   { index = "SFTPyPI" },
     # ]
     aeth-ext                  = [
-      { index = "SFTPyPI", marker = "sys_platform == 'linux'" },
-      { path = "../aeth_ext", editable = true, marker = "sys_platform == 'win32'" },
+      { index = "SFTPyPI" },
+      # { index = "SFTPyPI", marker = "sys_platform == 'linux'" },
+      # { path = "../aeth_ext", editable = true, marker = "sys_platform == 'win32'" },
     ]
     # timeclock-entry-processor = [
     #   { index = "SFTPyPI" },
     # ]
     timeclock-entry-processor = [
-      { index = "SFTPyPI", marker = "sys_platform == 'linux'" },
-      { path = "../timeclock_entry_processor", editable = true, marker = "sys_platform == 'win32'" }
+      { index = "SFTPyPI" },
+      # { index = "SFTPyPI", marker = "sys_platform == 'linux'" },
+      # { path = "../timeclock_entry_processor", editable = true, marker = "sys_platform == 'win32'" }
     ]
     poe-tasks                 = [
       { index = "SFTPyPI" },
