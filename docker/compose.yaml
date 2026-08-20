@@ -27,6 +27,41 @@ services:
       retries: 3
       start_period: 15s
 
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: scheduled-report-aggregator-wireguard
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - TAXES_JOB_PRIVATE_KEY=${TAXES_JOB_PRIVATE_KEY:?}
+      - SERVER_PUBLIC_KEY=${SERVER_PUBLIC_KEY:?}
+      - SERVER_ENDPOINT=${SERVER_ENDPOINT:?}
+    volumes:
+      - type: bind
+        source: /data/reports_processing_files/wireguard
+        target: /config
+      - ./docker/wireguard/wg_confs/wg0.conf.template:/config/wg_confs/wg0.conf.template:ro
+      - ./docker/wireguard/custom-cont-init.d:/custom-cont-init.d:ro
+    networks:
+      coolify:
+        aliases:
+          - sql-tunnel
+    restart: unless-stopped
+
+  sql-relay:
+    image: alpine/socat:latest
+    container_name: scheduled-report-aggregator-sqlrelay
+    network_mode: "service:wireguard"
+    depends_on:
+      - wireguard
+    command: >-
+      TCP-LISTEN:1433,fork,reuseaddr
+      TCP:10.10.0.2:1433
+    restart: unless-stopped
+
 networks:
   coolify:
     external: true
