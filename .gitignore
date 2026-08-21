@@ -246,3 +246,5 @@ timeclock_playground/
 /tax_project_files
 *.env
 *.code-workspace
+/client_log_history
+*.jsonl
