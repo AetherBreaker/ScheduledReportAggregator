@@ -1336,7 +1336,7 @@ wheels = [
 
 [[package]]
 name = "scheduled-report-aggregator"
-version = "2.4.4"
+version = "2.4.5"
 source = { editable = "." }
 dependencies = [
     { name = "aeth-ext", extra = ["async", "sftp"], marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
@@ -1363,7 +1363,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aeth-ext", extras = ["sftp", "async"], specifier = ">=6.2.2", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
+    { name = "aeth-ext", extras = ["sftp", "async"], specifier = ">=6.2.2,<7", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
     { name = "aiologic", specifier = ">=0.16.0" },
     { name = "apscheduler", specifier = ">=3.11.2" },
     { name = "gspread", specifier = ">=6.2.1" },
