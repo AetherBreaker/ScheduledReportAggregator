@@ -18,7 +18,8 @@ HEARTBEAT_SLUG = "scheduled-report-aggregator"
 
 def run_app() -> None:
   """Run the main application loop."""
-  initialize(asyncio=True, logging="socket")
+  initialize(asyncio=True, logging=True)
+  # initialize(asyncio=True, logging="socket")
 
   # Standard library imports
   from asyncio import run
