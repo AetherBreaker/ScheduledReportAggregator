@@ -82,6 +82,3 @@ type JobID = str
 type JobIDSuffix = JobID
 type JobIDPrefix = JobID
 type StoreNum = int
-
-
-class IsPydantic: ...

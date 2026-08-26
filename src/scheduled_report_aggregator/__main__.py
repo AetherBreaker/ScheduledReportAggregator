@@ -20,16 +20,13 @@ HEARTBEAT_SLUG = "scheduled-report-aggregator"
 
 def run_app() -> None:
   """Run the main application loop."""
-  initialize(asyncio=True, logging=True)
-  # initialize(asyncio=True, logging="socket")
-
-  # Standard library imports
-  from asyncio import run
+  # initialize(asyncio=True, logging=True)
+  initialize(asyncio=True, logging="socket")
 
   # First party imports
-  from scheduled_report_aggregator.startup import main
+  from scheduled_report_aggregator.startup import run_until_shutdown
 
-  run(main())
+  run_until_shutdown()
 
 
 if __name__ == "__main__":

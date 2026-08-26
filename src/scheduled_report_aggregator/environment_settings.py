@@ -1,7 +1,6 @@
 """Pydantic-settings model for this app's environment configuration and secret file locations."""
 
 # Standard library imports
-import sys
 from logging import getLogger
 from os import environ
 from pathlib import Path
@@ -9,7 +8,6 @@ from typing import Annotated
 
 # Third party imports
 from pydantic import Field
-from pydantic_settings import SettingsConfigDict
 
 # First party imports
 from aeth_ext.settings import BaseSettings
@@ -21,31 +19,23 @@ environ.setdefault("PYDANTIC_ERRORS_INCLUDE_URL", "false")
 
 __all__ = ["Settings"]
 
-CWD = Path(__file__).parent if getattr(sys, "frozen", False) else Path.cwd()
-
 
 class Settings(BaseSettings):
   """App settings sourced from the environment (and `.env` in debug), plus derived paths."""
 
-  model_config = (
-    SettingsConfigDict(
-      env_file=CWD / ".env",
-      env_file_encoding="utf-8",
-      env_ignore_empty=True,
-      extra="ignore",
-    )
-    if __debug__
-    else SettingsConfigDict()
-  )
+  # `model_config` and `persisted_dir_loc` are inherited: aeth_ext's `BaseSettings` already
+  # handles the `.env`-in-debug / env-only-under-`-O` split and the `/app/persisted_data` default.
 
-  persisted_dir_loc: Annotated[Path, Field(alias="PERSISTED_DIR_LOC")] = (
-    CWD / "persisted_data" if __debug__ else Path("/app/persisted_data")
-  )
-
-  timeclock_employee_input_loc: Annotated[Path, Field(alias="TIMECLOCK_EMPLOYEE_INPUT_LOC")] = (
-    persisted_dir_loc / "timeclock_employee_input"
-  )
-  timeclock_font_input_loc: Annotated[Path, Field(alias="TIMECLOCK_FONT_INPUT_LOC")] = persisted_dir_loc / "timeclock_font_input"
+  # Derived from the *resolved* `persisted_dir_loc` (env override included), not the class-level
+  # default -- the same `default_factory` pattern aeth_ext uses for `log_loc_folder`.
+  timeclock_employee_input_loc: Annotated[
+    Path,
+    Field(alias="TIMECLOCK_EMPLOYEE_INPUT_LOC", default_factory=lambda data: data["persisted_dir_loc"] / "timeclock_employee_input"),
+  ]
+  timeclock_font_input_loc: Annotated[
+    Path,
+    Field(alias="TIMECLOCK_FONT_INPUT_LOC", default_factory=lambda data: data["persisted_dir_loc"] / "timeclock_font_input"),
+  ]
 
   allotted_hours_sheet_id: Annotated[str, Field(alias="ALLOTTED_HOURS_SHEET_ID")] = (
     # "1Fn1FBZZAQwrB6v-wkMGkeIN12Aui7SyZvYpEBvc4Wjk"  # Production sheet ID
