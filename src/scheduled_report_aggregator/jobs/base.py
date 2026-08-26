@@ -6,42 +6,67 @@ from contextvars import ContextVar
 from datetime import datetime, timedelta
 from functools import wraps
 from inspect import iscoroutinefunction
+from json import loads
 from logging import getLogger
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Literal
 from zoneinfo import ZoneInfo
 
 # Third party imports
+from apscheduler.triggers.cron import CronTrigger
 from dateutil.relativedelta import FR, MO, SA, SU, TH, TU, WE, relativedelta
+from pydantic import SecretStr
 from pydantic.dataclasses import dataclass
 
 # First party imports
-from aeth_ext.errors.err_handling import FATAL_EVENT
-from aeth_ext.ftp.adapter import AdaptedFTP, AdaptedSFTP, FTPAdapter
+from aeth_ext.errors.shutdown import ShutdownKind, run_shutdown
+from aeth_ext.ftp import create_ftp_adapter
+from aeth_ext.ftp.credentials import SFTPCredentials
+from aeth_ext.types import IsPydantic
 from aeth_ext.types.abc import SingletonTypeABC
 from aeth_ext.utils import today
-from apscheduler.triggers.cron import CronTrigger
-from scheduled_report_aggregator.custom_types import DEFAULT_USE_ARGS, CronArgsType, DayOfWeek, IsPydantic, SubJobTriggerArgs, UseArgs
+from scheduled_report_aggregator.custom_types import DEFAULT_USE_ARGS, CronArgsType, DayOfWeek, SubJobTriggerArgs, UseArgs
 from scheduled_report_aggregator.environment_init_vars import CWD, SETTINGS
-from scheduled_report_aggregator.ftp_configs import RYOSFTPClient, SASSFTPClient, SFTSFTPClient
 
 if TYPE_CHECKING:
   # Standard library imports
   from collections.abc import Callable, Coroutine
   from datetime import timedelta
+  from pathlib import Path
   from typing import Any, ClassVar, Unpack
 
   # Third party imports
   from dateutil._common import weekday
 
   # First party imports
+  from aeth_ext.ftp.pool.sftp_adapter import SFTPAdapter
   from scheduled_report_aggregator.custom_types import JobID, JobIDPrefix, JobIDSuffix
   from scheduled_report_aggregator.scheduler_config import Scheduler
 
 logger = getLogger(__name__)
 
 
-FTP_CVAR = ContextVar("FTP_CVAR")
+FTP_CVAR: ContextVar[str] = ContextVar("FTP_CVAR")
+
+
+def _load_sftp_credentials(creds_file: Path) -> SFTPCredentials:
+  """Builds redacting SFTP credentials from a ``{"HOSTNAME", "USER", "PWD", "PORT"?}`` JSON secrets file.
+
+  The parsed plaintext lives only inside this frame: the password leaves it wrapped in a
+  ``SecretStr`` (rendered as ``**********`` by repr/str/logging) and is only unwrapped by aeth_ext at
+  the paramiko connect call.
+  """
+  raw = loads(creds_file.read_text())
+  try:
+    return SFTPCredentials(
+      host=raw["HOSTNAME"],
+      username=raw["USER"],
+      password=SecretStr(raw["PWD"]),
+      port=int(raw.get("PORT", 22)),
+      host_key_policy="auto_add",
+    )
+  finally:
+    del raw
 
 
 DTUTIL_WEEKDAY_MAP: dict[DayOfWeek | None, weekday] = {
@@ -117,7 +142,7 @@ class JobError(Exception):
 
 type FTPHandlerKey = Literal["sft", "sas", "ryo"]
 
-type FTPHandlersType = dict[FTPHandlerKey, FTPAdapter[AdaptedFTP | AdaptedSFTP]]
+type FTPHandlersType = dict[FTPHandlerKey, SFTPAdapter]
 
 
 class JobBase(metaclass=SingletonTypeABC):
@@ -125,10 +150,12 @@ class JobBase(metaclass=SingletonTypeABC):
 
   jobname_cvar = FTP_CVAR
 
+  # One pooled adapter per server, shared by every job (class-level, like the singleton jobs
+  # themselves). `container_cvar` labels each session's log lines with the running job's name.
   ftp_handlers: ClassVar[FTPHandlersType] = {
-    "sft": FTPAdapter[AdaptedSFTP](SFTSFTPClient, container_cvar=FTP_CVAR),
-    "sas": FTPAdapter[AdaptedSFTP](SASSFTPClient, container_cvar=FTP_CVAR),
-    "ryo": FTPAdapter[AdaptedSFTP](RYOSFTPClient, container_cvar=FTP_CVAR),
+    "sft": create_ftp_adapter(_load_sftp_credentials(SETTINGS.sft_website_creds_file), container_cvar=FTP_CVAR),
+    "sas": create_ftp_adapter(_load_sftp_credentials(SETTINGS.sas_ftp_creds_file), container_cvar=FTP_CVAR),
+    "ryo": create_ftp_adapter(_load_sftp_credentials(SETTINGS.ryo_ftp_creds_file), container_cvar=FTP_CVAR),
   }
 
   errored: bool = False  # used by main to check whether this job experienced an error
@@ -255,13 +282,13 @@ class JobBase(metaclass=SingletonTypeABC):
         except JobError as e:
           logger.error("%s: Job encountered a major error. Freezing this jobs execution", self.__class__.__name__, exc_info=e)
           self.errored = True
-          FATAL_EVENT.set()  # trigger shutdown in main
+          run_shutdown(ShutdownKind.FATAL)  # drive the shutdown `main()` is awaiting
 
         except Exception:
           # Anything beyond CanRescheduleJobError/JobError is unexpected: mark
           # the job errored and defer to aeth_ext's handle_fatal_exc_sync (wired
           # up on the executor's future callback in scheduler_config.py) for
-          # logging, alerting, and setting FATAL_EVENT.
+          # logging, alerting, and driving the fatal shutdown.
           self.errored = True
           raise
 
@@ -299,7 +326,7 @@ class JobBase(metaclass=SingletonTypeABC):
       if self.err_counter >= self.err_max_threshold:
         logger.error("%s: Maximum error threshold reached. Marking job as errored and triggering shutdown.", self.__class__.__name__)
         self.errored = True
-        FATAL_EVENT.set()  # trigger shutdown in main
+        run_shutdown(ShutdownKind.FATAL)  # drive the shutdown `main()` is awaiting
         return
 
     logger.info("%s: Rescheduling due to %s", self.__class__.__name__, reason)
