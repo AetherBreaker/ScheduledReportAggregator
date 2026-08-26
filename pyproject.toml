@@ -51,7 +51,7 @@
   mkdirs      = ["file_holding", "timeclock_playground"]
 
 [tool.poe]
-  include_script = "poe_tasks:tasks"
+  include_script = [{ script = "poe_tasks:tasks", executor = { type = "uv", frozen = true } }]
 
   [tool.poe.tasks.sync]
     help  = "Sync venv and ensure this project's scripts win over same-named dependency scripts"
