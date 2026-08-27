@@ -23,7 +23,7 @@
   dev = [
     "apscheduler-stubs>=0.1.0.dev2",
     "pandas-stubs>=3.0.3.260530",
-    "poe-tasks>=4.0.1",
+    "aeth-devkit>=7.0.0",
     "poethepoet>=0.47.0",
     "pytest>=9.0.3",
     "types-python-dateutil>=2.9.0.20260518",
@@ -51,7 +51,7 @@
   mkdirs      = ["file_holding", "timeclock_playground"]
 
 [tool.poe]
-  include_script = [{ script = "poe_tasks:tasks", executor = { type = "uv", frozen = true } }]
+  include_script = [{ script = "aeth_devkit:tasks", executor = { type = "uv", frozen = true } }]
 
   [tool.poe.tasks.sync]
     help  = "Sync venv and ensure this project's scripts win over same-named dependency scripts"
@@ -109,10 +109,10 @@
       # { index = "SFTPyPI", marker = "sys_platform == 'linux'" },
       # { path = "../timeclock_entry_processor", editable = true, marker = "sys_platform == 'win32'" }
     ]
-    poe-tasks                 = [
+    aeth-devkit                 = [
       { index = "SFTPyPI" },
       # , marker = "sys_platform == 'linux'"
-      # { path = "../poe_tasks", editable = true, marker = "sys_platform == 'win32'" },
+      # { path = "../aeth-devkit", editable = true, marker = "sys_platform == 'win32'" },
     ]
 
   [[tool.uv.index]]
