@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, override
 # Third party imports
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import MO, SU, WEEKLY, rrule
-from google.oauth2.service_account import Credentials
 from gspread.auth import authorize
 from gspread.http_client import BackOffHTTPClient
 
@@ -31,13 +30,10 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 
-DEFAULT_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 
 class FlipSheetJob(JobBase):
   """Duplicates the base sheet into per-week tabs, pruning old ones and protecting headers."""
-
-  creds = Credentials.from_service_account_file(SETTINGS.google_api_key_file, scopes=DEFAULT_SCOPES)
 
   sheet_tab_store_range = "'{sheet_name}'!R2C1:C1"
   sheet_tab_allotted_hours_range = "'{sheet_name}'!R2C3:C3"
@@ -53,7 +49,7 @@ class FlipSheetJob(JobBase):
     return authorize(self.creds, http_client=BackOffHTTPClient)
 
   @override
-  async def main_job(self, shift: timedelta | None = None) -> None:
+  def main_job(self, shift: timedelta | None = None) -> None:
 
     request_body = {"requests": []}
 
@@ -147,17 +143,14 @@ class FlipSheetJob(JobBase):
     self.client.http_client.batch_update(self._spreadsheet_id, request_body)
 
 
-async def main_test():
+def main_test():
   """Manually run the flip for the last few weeks; used when executing this module directly."""
   job = FlipSheetJob()
   for idx in range(-3, 1):
-    await job.main_job(shift=timedelta(weeks=idx))
+    job.main_job(shift=timedelta(weeks=idx))
 
 
 if __name__ == "__main__":
-  # Third party imports
-  import winloop as asyncio
-
   # First party imports
   # csv_file = CWD / "Time-Clock-Entry-Report_2026-05-14_19-31-12.csv"
   # TimeclockJob().run_processor(csv_file)
@@ -176,5 +169,5 @@ if __name__ == "__main__":
   # result = job.calculate_overunder_hours(job.load_manifest(CWD / "manifest.json"))
   # job.send_results(result)
 
-  asyncio.run(main_test())
+  main_test()
   pass

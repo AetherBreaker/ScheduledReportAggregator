@@ -28,7 +28,6 @@ from typing import TYPE_CHECKING, NamedTuple, Self, TextIO, override
 # Third party imports
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import MO, SU, WEEKLY, rrule
-from google.oauth2.service_account import Credentials
 from gspread.auth import authorize
 from gspread.http_client import BackOffHTTPClient
 from gspread.utils import DateTimeOption, Dimension, ValueRenderOption
@@ -66,7 +65,25 @@ SUBPROCESS_PERSISTED_DATA_FOLDER = TIMECLOCK_PLAYGROUND / "persisted_data"
 SUBPROCESS_MANIFEST_PATH = TIMECLOCK_PLAYGROUND / "manifest.json"
 
 
-MANUAL_EMPLOYEE_LIST_CSV = max(SETTINGS.timeclock_employee_input_loc.iterdir(), key=lambda f: f.stat().st_mtime)
+def newest_manual_employee_list() -> Path:
+  """Returns the most recently modified CSV in the timeclock employee-input folder.
+
+  Resolved per run rather than once at module scope. At module scope this ran during import --
+  before `initialize()` had configured logging or alerting -- so on a fresh volume (or an empty
+  input folder) it crashed the process with a bare stderr traceback pointing at a pydantic
+  `default_factory` lambda, with no log line and no alert. It also froze the choice for the
+  container's whole multi-week life, so an operator dropping in an updated list was silently
+  ignored by every later run.
+
+  Raises:
+    CanRescheduleJobError: The folder is missing or holds no files, so this run cannot proceed but
+      a later one may.
+  """
+  try:
+    return max(SETTINGS.timeclock_employee_input_loc.iterdir(), key=lambda f: f.stat().st_mtime)
+  except (OSError, ValueError) as e:
+    # OSError: the folder is absent or unreadable. ValueError: `max()` on an empty folder.
+    raise CanRescheduleJobError(f"no employee list available in {SETTINGS.timeclock_employee_input_loc}", count_error=True) from e
 
 
 WEEK_DATA_EXPECTED_COLUMNS = (
@@ -163,7 +180,6 @@ def get_shared_queue() -> Queue:
   return _mp_queue
 
 
-DEFAULT_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 
 MAX_STORENUM = 999
@@ -171,8 +187,6 @@ MAX_STORENUM = 999
 
 class TimeclockJob(JobBase):
   """Runs timeclock_entry_processor on the week's schedule report and emails over/under alerts."""
-
-  creds = Credentials.from_service_account_file(SETTINGS.google_api_key_file, scopes=DEFAULT_SCOPES)
 
   sheet_tab_store_range = "'{sheet_name}'!R2C1:C1"
   sheet_tab_allotted_hours_range = "'{sheet_name}'!R2C3:C3"
@@ -247,7 +261,7 @@ class TimeclockJob(JobBase):
   async def get_next_timeclock_report(self) -> Path:
     """Download this week's newest schedule report from SFTP, rescheduling if none exists yet."""
     logger.debug("Connecting to FTP to retrieve schedule report from %s", self.reports_pickup_folder)
-    with self.ftp_handlers["sft"].start_session() as ftp:
+    with self.ftp_session("sft") as ftp:
       remote_files = list(ftp.listdir(self.reports_pickup_folder.as_posix()))
       logger.debug("Found %d remote file(s) in pickup folder", len(remote_files))
 
@@ -439,7 +453,7 @@ class TimeclockJob(JobBase):
     allotted_hours = self.get_allotted_hours(valid_sheet_weeks)
 
     employee_groups = read_csv(
-      MANUAL_EMPLOYEE_LIST_CSV,
+      newest_manual_employee_list(),
       header=0,
       names=EMPLOYEE_INFO_EXPECTED_COLUMNS,
       usecols=(

@@ -214,7 +214,7 @@ class BalanceSheetJob(JobBase):
     self.job_output_folder.mkdir(parents=True, exist_ok=True)
 
   @override
-  async def main_job(self) -> None:
+  def main_job(self) -> None:
     downloaded_files = self.download_all_files()
 
     try:
@@ -235,7 +235,7 @@ class BalanceSheetJob(JobBase):
   def download_file(self, ftp_key: FTPHandlerKey) -> Path:
     """Fetch the newest matching file for one source, rescheduling if none is from this week."""
     file_vars = self.file_details[ftp_key]
-    with self.ftp_handlers[ftp_key].start_session() as conn:
+    with self.ftp_session(ftp_key) as conn:
       files = conn.listdir(file_vars.pickup_folder.as_posix())
       pattern = file_vars.filename_pattern_factory(today())
 
@@ -431,11 +431,9 @@ class BalanceSheetJob(JobBase):
 
 if __name__ == "__main__":
   # Standard library imports
-  from asyncio import run
-
   test_job = BalanceSheetJob()
 
-  run(test_job.main_job())
+  test_job.main_job()
 
   # result = test_job._test_download("ryo")
 

@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Annotated, override
 # Third party imports
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import DAILY, rrule
-from google.oauth2.service_account import Credentials
 from gspread.auth import authorize
 from gspread.http_client import BackOffHTTPClient
 from gspread.utils import DateTimeOption, Dimension, ValueInputOption, ValueRenderOption
@@ -47,7 +46,6 @@ _REPORT_PATTERN = compile(r"Automated-Employee-Discounts-Report_\d{4}-\d{2}-\d{2
 
 _EXPECTED_HEADER = [val.casefold() for val in ["Store", "Date", "Reg #", "Receipt #", "Discount Qty", "Discount Amount"]]
 
-_DEFAULT_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 
 def parse_currency(value: str) -> str:
@@ -94,7 +92,6 @@ type SheetURL = str
 class EmployeeDiscountsJob(JobBase):
   """Downloads the discounts report from SFT's SFTP and mirrors it into the report sheet."""
 
-  creds = Credentials.from_service_account_file(SETTINGS.google_api_key_file, scopes=_DEFAULT_SCOPES)
   reschedule_delay_minutes: ClassVar[int] = 10
   email_recipients = (
     "receiving@sweetfiretobacco.com",
@@ -126,7 +123,7 @@ class EmployeeDiscountsJob(JobBase):
     return authorize(self.creds, http_client=BackOffHTTPClient)
 
   @override
-  async def main_job(self) -> None:
+  def main_job(self) -> None:
     try:
       download_step_results = self._download_files()
     except Exception as e:
@@ -177,7 +174,7 @@ class EmployeeDiscountsJob(JobBase):
 
     try:
       for ftp_key, file_vars_list in collected_file_vars.items():
-        with self.ftp_handlers[ftp_key].start_session() as conn:
+        with self.ftp_session(ftp_key) as conn:
           for file_key, file_vars in file_vars_list.items():
             files = conn.listdir(file_vars.pickup_folder.as_posix())
             pattern = file_vars.filename_pattern(today()) if callable(file_vars.filename_pattern) else file_vars.filename_pattern
@@ -492,11 +489,9 @@ class EmployeeDiscountsJob(JobBase):
 
 if __name__ == "__main__":
   # Standard library imports
-  from asyncio import run
-
   test_job = EmployeeDiscountsJob()
 
-  run(test_job.main_job())
+  test_job.main_job()
 
   # path = EmployeeDiscountsJob()._test_process_report()
   # EmployeeDiscountsJob()._upload_to_gsheets(path)

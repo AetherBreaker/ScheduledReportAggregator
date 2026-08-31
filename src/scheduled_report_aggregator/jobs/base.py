@@ -2,9 +2,11 @@
 
 # Standard library imports
 from abc import abstractmethod
+from asyncio import to_thread
+from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import datetime, timedelta
-from functools import wraps
+from functools import cached_property, wraps
 from inspect import iscoroutinefunction
 from json import loads
 from logging import getLogger
@@ -15,13 +17,17 @@ from zoneinfo import ZoneInfo
 # Third party imports
 from apscheduler.triggers.cron import CronTrigger
 from dateutil.relativedelta import FR, MO, SA, SU, TH, TU, WE, relativedelta
+from google.oauth2.service_account import Credentials
+from paramiko.ssh_exception import SSHException
 from pydantic import SecretStr
 from pydantic.dataclasses import dataclass
 
 # First party imports
+from aeth_ext.errors import trigger_shutdown
 from aeth_ext.errors.shutdown import ShutdownKind, run_shutdown
 from aeth_ext.ftp import create_ftp_adapter
 from aeth_ext.ftp.credentials import SFTPCredentials
+from aeth_ext.ftp.errors import PoolClosedError
 from aeth_ext.types import IsPydantic
 from aeth_ext.types.abc import SingletonTypeABC
 from aeth_ext.utils import today
@@ -30,7 +36,7 @@ from scheduled_report_aggregator.environment_init_vars import CWD, SETTINGS
 
 if TYPE_CHECKING:
   # Standard library imports
-  from collections.abc import Callable, Coroutine
+  from collections.abc import Callable, Coroutine, Generator
   from datetime import timedelta
   from pathlib import Path
   from typing import Any, ClassVar, Unpack
@@ -39,7 +45,7 @@ if TYPE_CHECKING:
   from dateutil._common import weekday
 
   # First party imports
-  from aeth_ext.ftp.pool.sftp_adapter import SFTPAdapter
+  from aeth_ext.ftp.session import AdaptedSFTP
   from scheduled_report_aggregator.custom_types import JobID, JobIDPrefix, JobIDSuffix
   from scheduled_report_aggregator.scheduler_config import Scheduler
 
@@ -52,9 +58,16 @@ FTP_CVAR: ContextVar[str] = ContextVar("FTP_CVAR")
 def _load_sftp_credentials(creds_file: Path) -> SFTPCredentials:
   """Builds redacting SFTP credentials from a ``{"HOSTNAME", "USER", "PWD", "PORT"?}`` JSON secrets file.
 
-  The parsed plaintext lives only inside this frame: the password leaves it wrapped in a
-  ``SecretStr`` (rendered as ``**********`` by repr/str/logging) and is only unwrapped by aeth_ext at
-  the paramiko connect call.
+  The password is wrapped in a ``SecretStr`` so that ``repr``/``str``/logging render it as
+  ``**********``; aeth_ext only unwraps it at the paramiko connect call. Note this bounds *accidental
+  display*, not residency -- ``del raw`` below unbinds a name, it does not scrub the decoded string,
+  and the unwrapped value is a live frame local inside paramiko's ``SSHClient.connect`` for the
+  duration of the dial. Keeping dial failures off aeth_ext's fatal path (see ``run_job``) is what
+  actually stops the credential being rendered into an alert.
+
+  ``connect_timeout`` is set explicitly: the field defaults to ``None``, which hands
+  ``socket.create_connection`` no timeout at all and leaves an unreachable host to the OS SYN budget
+  (~130s on Linux). A job should fail and reschedule long before that.
   """
   raw = loads(creds_file.read_text())
   try:
@@ -64,6 +77,7 @@ def _load_sftp_credentials(creds_file: Path) -> SFTPCredentials:
       password=SecretStr(raw["PWD"]),
       port=int(raw.get("PORT", 22)),
       host_key_policy="auto_add",
+      connect_timeout=30.0,
     )
   finally:
     del raw
@@ -140,9 +154,9 @@ class JobError(Exception):
     self.count_error = count_error
 
 
-type FTPHandlerKey = Literal["sft", "sas", "ryo"]
+GOOGLE_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
-type FTPHandlersType = dict[FTPHandlerKey, SFTPAdapter]
+type FTPHandlerKey = Literal["sft", "sas", "ryo"]
 
 
 class JobBase(metaclass=SingletonTypeABC):
@@ -150,13 +164,58 @@ class JobBase(metaclass=SingletonTypeABC):
 
   jobname_cvar = FTP_CVAR
 
-  # One pooled adapter per server, shared by every job (class-level, like the singleton jobs
-  # themselves). `container_cvar` labels each session's log lines with the running job's name.
-  ftp_handlers: ClassVar[FTPHandlersType] = {
-    "sft": create_ftp_adapter(_load_sftp_credentials(SETTINGS.sft_website_creds_file), container_cvar=FTP_CVAR),
-    "sas": create_ftp_adapter(_load_sftp_credentials(SETTINGS.sas_ftp_creds_file), container_cvar=FTP_CVAR),
-    "ryo": create_ftp_adapter(_load_sftp_credentials(SETTINGS.ryo_ftp_creds_file), container_cvar=FTP_CVAR),
+  # Resolved per call rather than at import: `SETTINGS`'s creds-file properties raise
+  # FileNotFoundError when a secret is missing, and at class-body scope that failure happened during
+  # module import -- before `initialize()` had set up logging or alerting, so it surfaced as a bare
+  # stderr traceback with no alert. Reading the file per session also lets a rotated credential take
+  # effect without redeploying.
+  ftp_creds_files: ClassVar[dict[FTPHandlerKey, str]] = {
+    "sft": "sft_website_creds_file",
+    "sas": "sas_ftp_creds_file",
+    "ryo": "ryo_ftp_creds_file",
   }
+
+  @cached_property
+  def creds(self) -> Credentials:
+    """The Google service-account credentials, read on first use and cached per job instance.
+
+    Lazy for the same reason as `ftp_session`'s credential load: read at class-body scope this ran
+    during module import, before `initialize()` had configured logging or alerting, so a missing or
+    unreadable key file killed the process with a bare stderr traceback -- no log line, no alert,
+    and with `restart: no` no recovery. Jobs are singletons, so caching here is equivalent to the
+    class attribute this replaces, minus the import-time I/O.
+    """
+    return Credentials.from_service_account_file(SETTINGS.google_api_key_file, scopes=GOOGLE_SCOPES)
+
+  @contextmanager
+  def ftp_session(self, ftp_key: FTPHandlerKey) -> Generator[AdaptedSFTP]:
+    """Opens a short-lived SFTP session against *ftp_key*'s server, closing the adapter after.
+
+    Deliberately per-session rather than one long-lived pooled adapter per server shared by every
+    job. A connection pool pays for itself by amortizing SSH handshakes across many rapid acquires;
+    these jobs open exactly one session per run, days or a week apart. Sharing pools instead left
+    three SSH transports open for the container's whole multi-week life, because a released channel
+    is re-idled without decrementing its transport's `channel_count` and the pool's reaper only
+    considers transports at `channel_count == 0` -- so `_EMPTY_TRANSPORT_TTL` never applied to them.
+    With `keepalive_interval` defaulting to `None` nothing revalidated them either, so the first
+    acquire of the next weekly run paid for discovering that a week-idle TCP session had been
+    silently dropped: the pool does revalidate on checkout, but that check is an unbounded
+    `listdir(".")` sitting outside `acquire_timeout`, so detection cost the OS retransmit budget.
+
+    Closing the adapter per session removes that whole class -- there is no idle connection to go
+    stale -- at the cost of one handshake per job run.
+
+    Args:
+      ftp_key: Which configured server to connect to.
+
+    Yields:
+      A live SFTP session. Both it and the adapter behind it are closed on exit.
+    """
+    creds_file: Path = getattr(SETTINGS, self.ftp_creds_files[ftp_key])
+
+    # `container_cvar` labels the session's log lines with the running job's name.
+    with create_ftp_adapter(_load_sftp_credentials(creds_file), container_cvar=FTP_CVAR) as adapter, adapter.start_session() as conn:
+      yield conn
 
   errored: bool = False  # used by main to check whether this job experienced an error
   err_counter: int = 0
@@ -273,9 +332,23 @@ class JobBase(metaclass=SingletonTypeABC):
       with self.job_id.set(job_id), self.jobname_cvar.set(self.__class__.__name__):
         try:
           if iscoroutinefunction(func):
-            return await func(*args, **kwargs)
+            result = await func(*args, **kwargs)
           else:
-            return func(*args, **kwargs)
+            # Every job body but TimeclockJob's is synchronous: blocking paramiko transfers, pandas
+            # parsing, gspread calls and SMTP sends. `CustomAsyncIOExecutor` always dispatches
+            # through `create_task` (this wrapper is itself a coroutine function), so running these
+            # inline would pin the single event loop thread for the job's whole duration --
+            # starving the heartbeat, and leaving `main()`'s `await SHUTDOWN` unreachable so the
+            # shutdown tail never runs. `to_thread` copies the current context, so the
+            # `job_id`/`jobname_cvar` bindings set above still resolve inside the worker thread.
+            result = await to_thread(func, *args, **kwargs)
+
+          # A clean run clears the tally. `err_max_threshold` is documented as *consecutive*
+          # failures, but nothing reset this before, so on a singleton that survives every
+          # reschedule it counted failures for the life of the process -- three unrelated bad
+          # mornings months apart would trip it and take the container down.
+          self.err_counter = 0
+          return result
         except CanRescheduleJobError as e:
           self.error_reschedule(count=e.count_error, reason=e.reason)
 
@@ -283,6 +356,29 @@ class JobBase(metaclass=SingletonTypeABC):
           logger.error("%s: Job encountered a major error. Freezing this jobs execution", self.__class__.__name__, exc_info=e)
           self.errored = True
           run_shutdown(ShutdownKind.FATAL)  # drive the shutdown `main()` is awaiting
+
+        except PoolClosedError:
+          # The pool's shutdown teardown has already run, so this job was mid-flight when the
+          # process started going down. Not a failure, and deliberately not a `ConnectionError`
+          # upstream precisely so it is never mistaken for something worth retrying.
+          logger.info("%s: Shutdown in progress; abandoning this run.", self.__class__.__name__)
+
+        except (OSError, SSHException) as e:
+          # Everything the v8 FTP layer raises for a server that is unreachable, at capacity, or
+          # slow lands under OSError: ServerNotAvailableError and ServerCapacityError are
+          # ConnectionErrors, and PoolTimeoutError is a TimeoutError. Paramiko's auth, host-key and
+          # protocol failures are deliberately left untranslated by aeth_ext, so SSHException is
+          # caught alongside them.
+          #
+          # These must never fall through to `except Exception` below. That hands them to aeth_ext's
+          # fatal handler, which renders the traceback with `show_locals=True` -- and the plaintext
+          # SFTP password is a live frame local inside paramiko's `SSHClient.connect`, so the
+          # credential would be mailed out and pushed to Pushover. A transient outage would also
+          # take the whole container down, which `restart: no` makes a permanent one.
+          #
+          # Counted, so a genuinely persistent failure still escalates through the error threshold
+          # rather than retrying forever.
+          self.error_reschedule(count=True, reason=f"{type(e).__name__}: {e}")
 
         except Exception:
           # Anything beyond CanRescheduleJobError/JobError is unexpected: mark
@@ -295,8 +391,14 @@ class JobBase(metaclass=SingletonTypeABC):
     return wrapper
 
   @abstractmethod
-  async def main_job(self) -> None:
-    """Main job logic goes here. Override in subclasses."""
+  def main_job(self) -> Coroutine[Any, Any, None] | None:
+    """Main job logic goes here. Override in subclasses.
+
+    Override with a plain `def` when the body is synchronous (the common case -- SFTP, pandas,
+    gspread and SMTP are all blocking): `run_job`'s wrapper then hands it to a worker thread so it
+    cannot pin the event loop. Override with `async def` only for a body that genuinely awaits, as
+    `TimeclockJob` does. The union return type is what lets both forms satisfy this signature.
+    """
     raise NotImplementedError("Subclasses must implement the main_job method.")
 
   def cancel_self(self) -> None:
@@ -326,6 +428,20 @@ class JobBase(metaclass=SingletonTypeABC):
       if self.err_counter >= self.err_max_threshold:
         logger.error("%s: Maximum error threshold reached. Marking job as errored and triggering shutdown.", self.__class__.__name__)
         self.errored = True
+
+        # `run_shutdown` alone only requests the shutdown -- all alerting lives in `_handle_fatal`
+        # and `trigger_shutdown`, neither of which is on this path, so this exit used to be
+        # completely silent. With `restart: no` that means a container that stays down until someone
+        # notices a missing report. `trigger_shutdown` sends the alert with `in_except_block=False`,
+        # so no traceback (and so no credential-bearing frame locals) is rendered.
+        #
+        # It is a deliberate no-op under `__debug__`, like every fatal helper in aeth_ext, so the
+        # explicit `run_shutdown` below keeps local dev runs stopping here too. In production it is
+        # simply the second caller, which only escalates the kind and never starts a second pass.
+        trigger_shutdown(
+          f"{self.__class__.__name__}: maximum error threshold reached",
+          f"{self.err_counter} consecutive failures (threshold {self.err_max_threshold}). Last reason: {reason}",
+        )
         run_shutdown(ShutdownKind.FATAL)  # drive the shutdown `main()` is awaiting
         return
 
