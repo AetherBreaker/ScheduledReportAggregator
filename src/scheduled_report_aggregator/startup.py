@@ -3,6 +3,7 @@
 # Standard library imports
 from asyncio import CancelledError, create_task, run
 from contextlib import suppress
+from inspect import isawaitable
 from logging import INFO, WARNING, getLogger
 from sys import exit as sys_exit
 from typing import TYPE_CHECKING
@@ -138,7 +139,13 @@ async def main() -> None:  # sourcery skip: remove-empty-nested-block
 
   if __debug__:
     for job_cls, _ in jobs:
-      await job_cls().main_job()  # Run each job once immediately in debug mode for testing
+      # Run each job once immediately in debug mode for testing. `main_job` is a plain `def` for
+      # every job but TimeclockJob (see `JobBase.main_job`), so only await what actually returns a
+      # coroutine. Unlike the scheduled path this runs the sync bodies inline -- fine here, since
+      # nothing else is using the loop yet.
+      result = job_cls().main_job()
+      if isawaitable(result):
+        await result
 
   RICH_CONSOLE.rule("[bold red]Boot Done[/]", style="bold red")
   # with RICH_CONSOLE.status("Application is running."):

@@ -123,12 +123,18 @@ class CustomAsyncIOExecutor(AsyncIOExecutor):
     @handle_fatal_exc_sync
     def callback(f: Future[Any]):
       self._pending_futures.discard(f)
-      # try:
-      events = f.result()
-      # except BaseException as e:
-      #   self._run_job_error(job.id, *exc_info()[1:])
-      #   raise e
-      # else:
+      try:
+        events = f.result()
+      except (KeyboardInterrupt, SystemExit):
+        # aeth_ext's exit nudge simulates a SIGINT, so a shutdown that lands while a job is running
+        # raises KeyboardInterrupt *inside* that job. The task stores it, and `Runner.close()` then
+        # drains it into this callback. Without this arm `f.result()` re-raises it into
+        # `handle_fatal_exc_sync`, which exempts CancelledError but not the interrupt aeth_ext
+        # itself injects -- so an ordinary `docker stop` or Coolify redeploy that happens to land on
+        # a running job produced a "Fatal exception" alert email plus a Pushover push, escalated the
+        # shutdown GRACEFUL -> FATAL (collapsing the teardown budget from 7.0s to 1.0s) and exited 1,
+        # recording a crashed deployment for what was a clean operator stop.
+        return
       self._run_job_success(job.id, events)
 
     if iscoroutinefunction_partial(job.func):
