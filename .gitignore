@@ -1,14 +1,3 @@
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
-
-# Virtual environments
-.venv
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -208,9 +197,9 @@ cython_debug/
 .abstra/
 
 # Visual Studio Code
-#   Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore
+#   Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore 
 #   that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
-#   and can be added to the global gitignore or merged into this file. However, if you prefer,
+#   and can be added to the global gitignore or merged into this file. However, if you prefer, 
 #   you could uncomment the following to ignore the entire vscode folder
 # .vscode/
 # Temporary file for partial code execution
@@ -230,7 +219,16 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# Claude Code — per-machine settings (absolute paths, this machine's venv layout).
+# The shared half lives in .claude/settings.json and is committed.
+.claude/settings.local.json
+
+# ---- SFT additions ----
+.cache/
+*.env
 persisted_data/
+
+# ---- project-specific ----
 timeclock_entry_processor_output/
 input/
 font_input/
@@ -244,7 +242,6 @@ timeclock_playground/
 /manifest.json
 *.json
 /tax_project_files
-*.env
 *.code-workspace
 /client_log_history
 *.jsonl

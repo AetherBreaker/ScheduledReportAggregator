@@ -61,3 +61,8 @@ timeclock_entry_processor_output/
 input/
 font_input/
 employee_input/
+.cache/
+.venv/
+.git
+.vscode
+dist/
