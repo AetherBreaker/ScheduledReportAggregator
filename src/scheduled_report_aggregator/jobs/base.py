@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING, Literal
 from zoneinfo import ZoneInfo
 
 # Third party imports
-from apscheduler.triggers.cron import CronTrigger
 from dateutil.relativedelta import FR, MO, SA, SU, TH, TU, WE, relativedelta
 from google.oauth2.service_account import Credentials
 from paramiko.ssh_exception import SSHException
@@ -31,6 +30,7 @@ from aeth_ext.ftp.errors import PoolClosedError
 from aeth_ext.types import IsPydantic
 from aeth_ext.types.abc import SingletonTypeABC
 from aeth_ext.utils import today
+from apscheduler.triggers.cron import CronTrigger
 from scheduled_report_aggregator.custom_types import DEFAULT_USE_ARGS, CronArgsType, DayOfWeek, SubJobTriggerArgs, UseArgs
 from scheduled_report_aggregator.environment_init_vars import CWD, SETTINGS
 
