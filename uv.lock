@@ -14,14 +14,14 @@ supported-markers = [
 
 [[package]]
 name = "aeth-devkit"
-version = "8.0.2"
+version = "8.0.3"
 source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }
 dependencies = [
     { name = "poethepoet", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]
-sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/ae3/dc656f972d895/aeth_devkit-8.0.2.tar.gz", hash = "sha256:ae3dc656f972d895d626845f6563905381a02ab0f6d131791895544c32484164" }
+sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/dcc/0ceac12ec5469/aeth_devkit-8.0.3.tar.gz", hash = "sha256:dcc0ceac12ec5469efa81c2607e9841e9f70ad66fbf56cdf50d42ced36266efa" }
 wheels = [
-    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/5c7/ee24359064071/aeth_devkit-8.0.2-py3-none-win_amd64.whl", hash = "sha256:5c7ee2435906407166e3de7a1a32b1c4e99db2efc1732a8050b2164aa2a23dfa" },
+    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/756/6b5c6e8c5e373/aeth_devkit-8.0.3-py3-none-win_amd64.whl", hash = "sha256:7566b5c6e8c5e373ffc9e2354917a652dba8dbdc55b3cc0699355479417cb3b3" },
 ]
 
 [[package]]
@@ -1114,7 +1114,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "aeth-devkit", specifier = ">=8.0.2", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
+    { name = "aeth-devkit", specifier = ">=8.0.3", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
     { name = "apscheduler-stubs", specifier = ">=0.1.0.dev2" },
     { name = "pandas-stubs", specifier = ">=3.0.3.260530" },
     { name = "poethepoet", specifier = ">=0.47.0" },
