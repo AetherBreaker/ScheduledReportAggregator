@@ -1,3 +1,5 @@
+"""Stop hook that runs pyright project-wide and reports any findings back to Claude."""
+
 # Standard library imports
 import json
 import os
@@ -5,6 +7,7 @@ import subprocess
 
 
 def main():
+    """Run `uv run pyright` and emit its output as Stop-hook additional context on failure."""
     project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
     result = subprocess.run(
         ["uv", "run", "pyright"],

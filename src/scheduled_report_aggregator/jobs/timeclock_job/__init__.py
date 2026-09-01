@@ -1,3 +1,5 @@
+"""Weekly timeclock job: processes schedule reports and alerts stores over/under allotted hours."""
+
 if __name__ == "__main__":
   # First party imports
   from aeth_ext.logging.init import init_logging
@@ -168,6 +170,8 @@ MAX_STORENUM = 999
 
 
 class TimeclockJob(JobBase):
+  """Runs timeclock_entry_processor on the week's schedule report and emails over/under alerts."""
+
   creds = Credentials.from_service_account_file(SETTINGS.google_api_key_file, scopes=DEFAULT_SCOPES)
 
   sheet_tab_store_range = "'{sheet_name}'!R2C1:C1"
@@ -184,6 +188,7 @@ class TimeclockJob(JobBase):
   )
 
   def __post_init__(self) -> None:
+    """Prepare folders, reset the manifest, and (re)create the subprocess playground symlinks."""
     self.output_folder = self.job_holding_folder / "output"
     self.manifest_path = self.job_holding_folder / "manifest.json"
 
@@ -219,6 +224,7 @@ class TimeclockJob(JobBase):
 
   @property
   def client(self) -> Client:
+    """A gspread client authorized with this job's service-account credentials."""
     return authorize(self.creds, http_client=BackOffHTTPClient)
 
   @override
@@ -239,6 +245,7 @@ class TimeclockJob(JobBase):
     logger.info("TimeclockJob finished")
 
   async def get_next_timeclock_report(self) -> Path:
+    """Download this week's newest schedule report from SFTP, rescheduling if none exists yet."""
     logger.debug("Connecting to FTP to retrieve schedule report from %s", self.reports_pickup_folder)
     with self.ftp_handlers["sft"].start_session() as ftp:
       remote_files = list(ftp.listdir(self.reports_pickup_folder.as_posix()))
@@ -270,7 +277,7 @@ class TimeclockJob(JobBase):
         ) from None
 
   async def run_processor(self, csv_file: Path) -> dict[StoreNum, dict[date, ManifestEntry]]:
-    # Run timeclock_entry_processor as a subprocess via its CLI.
+    """Run timeclock_entry_processor as a subprocess on the CSV and load the manifest it writes."""
     logger.info("Running timeclock_entry_processor on %s", csv_file.name)
 
     self.manifest_path.touch(exist_ok=True)
@@ -329,6 +336,7 @@ class TimeclockJob(JobBase):
     return self.load_manifest(self.manifest_path)
 
   def load_manifest(self, manifest_path: Path) -> dict[StoreNum, dict[date, ManifestEntry]]:
+    """Parse the processor's manifest JSON into per-store, per-week output file entries."""
     # ensure that manifest file was created and has content
     if not manifest_path.exists() or manifest_path.stat().st_size == 0:
       raise RuntimeError(f"Expected manifest file at {manifest_path} was not created or is empty after processing")
@@ -344,6 +352,7 @@ class TimeclockJob(JobBase):
     return manifest_data
 
   def get_allotted_hours[Date_T: date](self, week_ending_dates: list[Date_T]) -> dict[Date_T, dict[StoreNum, StoreHoursData]]:
+    """Fetch each week's per-store allotted and training hours from the Google Sheet tabs."""
     collected = {}
 
     logger.debug("Fetching allotted hours from Google Sheet (id=%s)", SETTINGS.allotted_hours_sheet_id)
@@ -414,6 +423,7 @@ class TimeclockJob(JobBase):
     return collected
 
   def calculate_overunder_hours(self, weeks_data: dict[StoreNum, dict[date, ManifestEntry]]) -> set[OverUnderEntry]:
+    """Compare each store-week's worked hours against its allotment, yielding over/under entries."""
     overunder_data: set[OverUnderEntry] = set()
     logger.debug("Calculating over/under hours for %d store(s)", len(weeks_data))
 
@@ -494,6 +504,7 @@ class TimeclockJob(JobBase):
   MAX_ALLOWED_UNDER_HOURS = Decimal(-10)
 
   def send_results(self, overunder_data: set[OverUnderEntry]):
+    """Email an alert (with the store's PDF/CSV attached) for each store-week outside tolerance."""
     logger.info("Preparing over/under alert emails")
     emails_to_send = []
 
@@ -571,6 +582,7 @@ class TimeclockJob(JobBase):
     return child_env
 
   async def test_job_specific_file(self, file: Path) -> None:
+    """Manually run the full pipeline on a specific local CSV (debug/testing helper)."""
     logger.info("TimeclockJob starting")
     logger.info("TimeclockJob starting with file: %s", file.name)
 
@@ -587,7 +599,7 @@ class TimeclockJob(JobBase):
     logger.info("TimeclockJob finished")
 
   def test_last_run(self, manifest_path: Path = CWD / "manifest.json") -> None:
-
+    """Re-run the over/under calculation from an existing manifest (debug/testing helper)."""
     manifest_data = self.load_manifest(manifest_path)
 
     store_count = len(manifest_data)

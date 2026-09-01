@@ -1,3 +1,5 @@
+"""Weekly job that rotates the allotted-hours spreadsheet's tabs to the upcoming weeks."""
+
 if __name__ == "__main__":
   # First party imports
   from aeth_ext.logging.init import init_logging
@@ -33,6 +35,8 @@ DEFAULT_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 
 class FlipSheetJob(JobBase):
+  """Duplicates the base sheet into per-week tabs, pruning old ones and protecting headers."""
+
   creds = Credentials.from_service_account_file(SETTINGS.google_api_key_file, scopes=DEFAULT_SCOPES)
 
   sheet_tab_store_range = "'{sheet_name}'!R2C1:C1"
@@ -45,6 +49,7 @@ class FlipSheetJob(JobBase):
 
   @property
   def client(self) -> Client:
+    """A gspread client authorized with this job's service-account credentials."""
     return authorize(self.creds, http_client=BackOffHTTPClient)
 
   @override
@@ -143,6 +148,7 @@ class FlipSheetJob(JobBase):
 
 
 async def main_test():
+  """Manually run the flip for the last few weeks; used when executing this module directly."""
   job = FlipSheetJob()
   for idx in range(-3, 1):
     await job.main_job(shift=timedelta(weeks=idx))

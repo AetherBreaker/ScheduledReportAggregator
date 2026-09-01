@@ -1,3 +1,5 @@
+"""Shared job infrastructure: cron argument handling, the JobBase singleton, and job errors."""
+
 # Standard library imports
 from abc import abstractmethod
 from contextvars import ContextVar
@@ -10,7 +12,6 @@ from typing import TYPE_CHECKING, Literal
 from zoneinfo import ZoneInfo
 
 # Third party imports
-from apscheduler.triggers.cron import CronTrigger
 from dateutil.relativedelta import FR, MO, SA, SU, TH, TU, WE, relativedelta
 from pydantic.dataclasses import dataclass
 
@@ -19,6 +20,7 @@ from aeth_ext.errors.err_handling import FATAL_EVENT
 from aeth_ext.ftp.adapter import AdaptedFTP, AdaptedSFTP, FTPAdapter
 from aeth_ext.types.abc import SingletonTypeABC
 from aeth_ext.utils import today
+from apscheduler.triggers.cron import CronTrigger
 from scheduled_report_aggregator.custom_types import DEFAULT_USE_ARGS, CronArgsType, DayOfWeek, IsPydantic, SubJobTriggerArgs, UseArgs
 from scheduled_report_aggregator.environment_init_vars import CWD, SETTINGS
 from scheduled_report_aggregator.ftp_configs import RYOSFTPClient, SASSFTPClient, SFTSFTPClient
@@ -97,6 +99,7 @@ class CanRescheduleJobError(Exception):
   """Custom exception to indicate that a job should be automatically rescheduled."""
 
   def __init__(self, message: str, reason: str | None = None, count_error: bool = False):
+    """Store the reschedule reason and whether this failure counts toward the error threshold."""
     super().__init__(message)
     self.reason = reason or message
     self.count_error = count_error
@@ -106,6 +109,7 @@ class JobError(Exception):
   """Custom exception to indicate that a job has encountered an error."""
 
   def __init__(self, message: str, reason: str | None = None, count_error: bool = False):
+    """Store the error reason and whether this failure counts toward the error threshold."""
     super().__init__(message)
     self.reason = reason or message
     self.count_error = count_error
@@ -117,6 +121,8 @@ type FTPHandlersType = dict[FTPHandlerKey, FTPAdapter[AdaptedFTP | AdaptedSFTP]]
 
 
 class JobBase(metaclass=SingletonTypeABC):
+  """Singleton base for all scheduled jobs: FTP access, scheduling, and error/reschedule logic."""
+
   jobname_cvar = FTP_CVAR
 
   ftp_handlers: ClassVar[FTPHandlersType] = {
@@ -149,6 +155,7 @@ class JobBase(metaclass=SingletonTypeABC):
   jobstore: str
 
   def __init__(self):
+    """Set up job tracking, create the holding folder, and run the subclass post-init hook."""
     self.active_jobs = {}  # track active jobs for cleanup if needed
     self.active_args = {}  # track active jobs' trigger args for rescheduling logic
     self.extra_jobs_register = {}
@@ -166,6 +173,7 @@ class JobBase(metaclass=SingletonTypeABC):
     jobstore: str = "general_jobs",
     **kwargs: Unpack[CronArgsType],
   ) -> JobBase:
+    """Bind the singleton to a scheduler, base job id, and its main cron schedule."""
     self = cls()
     self.base_job_id = job_id
     self.scheduler = scheduler
@@ -179,7 +187,8 @@ class JobBase(metaclass=SingletonTypeABC):
 
     return self
 
-  def __post_init__(self): ...
+  def __post_init__(self):
+    """Hook for subclass setup after `__init__`; the base implementation does nothing."""
 
   def schedule_registered_jobs(self, base_cron_args: CronArgs | None = None) -> None:
     """Hook for adding sub-jobs to the scheduler. Override in subclasses if needed."""
@@ -283,6 +292,7 @@ class JobBase(metaclass=SingletonTypeABC):
     self.schedule_registered_jobs()
 
   def error_reschedule(self, count: bool = False, reason: str = "error in job") -> None:
+    """Reschedule after a failure; at the consecutive-error threshold, trigger shutdown instead."""
     if count:
       self.err_counter += 1
 
@@ -301,6 +311,7 @@ class JobBase(metaclass=SingletonTypeABC):
 
   @staticmethod
   def check_if_this_week(dt: datetime) -> bool:
+    """Whether the given datetime falls in the current Sunday-through-Saturday week."""
     now_day = today(tzinfo=SETTINGS.tz)
     start_of_week = now_day - relativedelta(weekday=SU(-1))
     end_of_week = start_of_week + relativedelta(weekday=SA(+1), hour=23, minute=59, second=59, microsecond=999999)
@@ -308,9 +319,9 @@ class JobBase(metaclass=SingletonTypeABC):
 
   @staticmethod
   def extract_use_args(trigger_args: CronArgs) -> UseArgs:
-    """
-    Attempt to extract which cron args are being used in the provided trigger args to determine which ones to shift when rescheduling.
-    If this fails, it will default to DEFAULT_USE_ARGS
+    """Extract which cron args the trigger uses, to determine which to shift when rescheduling.
+
+    If this fails, it will default to DEFAULT_USE_ARGS.
     """
     try:
       return UseArgs(

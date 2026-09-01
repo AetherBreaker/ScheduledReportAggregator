@@ -1,3 +1,5 @@
+"""PreToolUse hook that blocks Claude from running dependency-changing uv commands."""
+
 # Standard library imports
 import json
 import re
@@ -7,6 +9,7 @@ BANNED = re.compile(r"(?:^|[;&|\n]|\bthen\b)\s*uv\s+(?:add|remove|lock)\b")
 
 
 def main():
+    """Deny the Bash tool call if its command invokes `uv add`, `uv remove`, or `uv lock`."""
     data = json.load(sys.stdin)
     command = data.get("tool_input", {}).get("command", "")
     if not command or not BANNED.search(command):

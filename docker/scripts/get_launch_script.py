@@ -1,3 +1,6 @@
+"""Print the project's single `run-app-*` entry-point script name, erroring on zero or many."""
+
+# Standard library imports
 import sys
 import tomllib
 

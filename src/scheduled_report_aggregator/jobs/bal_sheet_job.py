@@ -1,3 +1,5 @@
+"""Weekly job that merges the RYO and SAS ACH draft files into one balance sheet and emails it."""
+
 # Standard library imports
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
@@ -81,12 +83,9 @@ def _assemble_range_pattern(
   start_val: str | int = 0,
   d2_max: int = 9,
 ) -> str:
-  """
-  For a given two-digit number str (e.g. 26)
-  convert it into a regex pattern (e.g. 2[0-6]|1[0-9]|0[0-9])
-  Expects only 2 digits
+  """Convert a two-digit number (e.g. 26) into a regex range pattern (e.g. 2[0-6]|1[0-9]|0[0-9]).
 
-  d2_max is inclusive
+  Expects at most 2 digits; d2_max is inclusive.
   """
   end_val = str(end_val)
   start_val = int(start_val)
@@ -185,6 +184,8 @@ class DownloadedFiles(TypedDict):
 
 
 class BalanceSheetJob(JobBase):
+  """Downloads this week's RYO and SAS draft files, merges them, and emails the result."""
+
   reschedule_delay_minutes: ClassVar[int] = 10
   email_recipients = (
     "jacob.ogden@sweetfiretobacco.com",
@@ -192,6 +193,7 @@ class BalanceSheetJob(JobBase):
   )
 
   def __post_init__(self) -> None:
+    """Register each source file's remote location/pattern and prepare local folders."""
     self.file_details: dict[FTPHandlerKey, FileVars] = {
       "ryo": FileVars(
         pickup_folder=PurePosixPath("/Accounting"),
@@ -231,6 +233,7 @@ class BalanceSheetJob(JobBase):
       raise CanRescheduleJobError("error in emailing report", count_error=True) from e
 
   def download_file(self, ftp_key: FTPHandlerKey) -> Path:
+    """Fetch the newest matching file for one source, rescheduling if none is from this week."""
     file_vars = self.file_details[ftp_key]
     with self.ftp_handlers[ftp_key].start_session() as conn:
       files = conn.listdir(file_vars.pickup_folder.as_posix())
@@ -271,6 +274,7 @@ class BalanceSheetJob(JobBase):
         ) from None
 
   def download_all_files(self) -> DownloadedFiles:
+    """Download every source file, deleting partial downloads if any source fails."""
     downloaded_files: dict[str, Path] = {}
     with self.jobname_cvar.set(self.__class__.__name__):
       for ftp_key in self.file_details:
@@ -286,6 +290,7 @@ class BalanceSheetJob(JobBase):
     return DownloadedFiles(**downloaded_files)
 
   def assemble_report(self, downloaded_files: DownloadedFiles) -> Path:
+    """Merge the RYO and SAS CSVs per store into the combined balance sheet CSV."""
     with downloaded_files["ryo"].open("r", encoding="utf-8") as ryo_file:
       ryo_first_line = ryo_file.readline()
       ryo_df = read_csv(
@@ -389,6 +394,7 @@ class BalanceSheetJob(JobBase):
     return out_file
 
   def email_report(self, report_path: Path) -> None:
+    """Email the assembled balance sheet to this job's recipients as an attachment."""
     assert isinstance(SETTINGS.alerts_email, str), "SETTINGS.alerts_email must be a string"
     msg = prepare_email_message(
       EmailMessageParts(

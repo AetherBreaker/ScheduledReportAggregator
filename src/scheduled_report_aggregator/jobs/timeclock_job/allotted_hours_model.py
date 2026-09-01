@@ -1,3 +1,5 @@
+"""Pydantic model for one store's row in the allotted-hours Google Sheet."""
+
 # Standard library imports
 from decimal import Decimal
 from typing import Annotated, Any
@@ -16,6 +18,8 @@ def zero_if_err(value: Any) -> Decimal | Any:
 
 
 class AllottedHoursModel(BaseModel):
+  """One store's allotted and training hours, with malformed training values coerced to zero."""
+
   model_config = ConfigDict(extra="ignore")
 
   store: int

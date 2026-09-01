@@ -1,3 +1,6 @@
+"""Print the `[tool.docker]` mkdirs entries, one per line, for the container entrypoint."""
+
+# Standard library imports
 import tomllib
 
 with open("/app/pyproject.toml", "rb") as f:

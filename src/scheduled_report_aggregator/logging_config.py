@@ -1,3 +1,5 @@
+"""Logging configuration hook-in for aeth_ext's logging setup."""
+
 # First party imports
 from aeth_ext.logging.setup import BaseLoggingConfig
 

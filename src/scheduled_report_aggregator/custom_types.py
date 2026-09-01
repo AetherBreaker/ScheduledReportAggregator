@@ -1,3 +1,5 @@
+"""Shared type aliases and small structural types used across the scheduler and jobs."""
+
 # Standard library imports
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, NamedTuple, TypedDict
@@ -29,6 +31,8 @@ __all__ = [
 
 
 class CronArgsType(TypedDict):
+  """Keyword arguments accepted by apscheduler's CronTrigger, as a typed mapping."""
+
   year: NotRequired[int | str | None]
   month: NotRequired[int | str | None]
   day: NotRequired[int | str | None]
@@ -40,6 +44,8 @@ class CronArgsType(TypedDict):
 
 
 class DayOfWeek(StrEnum):
+  """Weekday names mapped to apscheduler's three-letter cron day-of-week codes."""
+
   SUNDAY = "sun"
   MONDAY = "mon"
   TUESDAY = "tue"
@@ -51,6 +57,8 @@ class DayOfWeek(StrEnum):
 
 @dataclass
 class UseArgs:
+  """Flags for which cron fields a trigger actually uses, so rescheduling shifts only those."""
+
   year: bool = False
   month: bool = False
   day: bool = False
@@ -64,6 +72,8 @@ DEFAULT_USE_ARGS = UseArgs()
 
 
 class SubJobTriggerArgs(NamedTuple):
+  """A sub-job's schedule offset from its parent job plus the cron fields it varies."""
+
   delta: timedelta | relativedelta
   use_args: UseArgs = DEFAULT_USE_ARGS
 

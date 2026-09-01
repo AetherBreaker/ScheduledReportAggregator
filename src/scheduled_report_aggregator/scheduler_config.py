@@ -1,3 +1,5 @@
+"""Customized apscheduler AsyncIO scheduler/executor with fatal-error handling and quiet jobs."""
+
 # Standard library imports
 from datetime import timedelta
 from logging import getLogger
@@ -5,8 +7,10 @@ from re import compile
 from typing import TYPE_CHECKING, override
 from zoneinfo import ZoneInfo
 
-# Third party imports
+# First party imports
 import apscheduler.executors.base as exec_base
+from aeth_ext.errors.err_handling import handle_fatal_exc_sync
+from aeth_ext.utils import get_now
 from apscheduler.events import EVENT_JOB_ADDED, EVENT_JOB_EXECUTED, EVENT_JOB_MISSED, JobEvent, JobExecutionEvent
 from apscheduler.executors.asyncio import AsyncIOExecutor
 from apscheduler.jobstores.base import ConflictingIdError
@@ -14,10 +18,6 @@ from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.schedulers.base import STATE_RUNNING, STATE_STOPPED
 from apscheduler.util import iscoroutinefunction_partial
-
-# First party imports
-from aeth_ext.errors.err_handling import handle_fatal_exc_sync
-from aeth_ext.utils import get_now
 
 # Local folder imports
 from .environment_init_vars import SETTINGS
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
   from datetime import datetime
   from typing import Any, TextIO
 
-  # Third party imports
+  # First party imports
   from apscheduler.job import Job
 
 
@@ -46,10 +46,9 @@ DO_NOT_LOG_PATTERNS = [
 
 
 def run_job(job: Job, jobstore_alias: str, run_times: list[datetime], logger_name: str):
-  """
-  Called by executors to run the job. Returns a list of scheduler events to be dispatched by the
-  scheduler.
+  """Called by executors to run the job.
 
+  Returns a list of scheduler events to be dispatched by the scheduler.
   """
   events = []
   local_logger = getLogger(logger_name)
@@ -143,9 +142,11 @@ class CustomAsyncIOExecutor(AsyncIOExecutor):
 
 
 class Scheduler(AsyncIOScheduler):
+  """AsyncIO scheduler preconfigured with this app's job stores, defaults, and executor."""
+
   @classmethod
   def init_scheduler(cls) -> Scheduler:
-
+    """Build the scheduler with its memory job stores, misfire defaults, and custom executor."""
     job_stores = {
       "default": MemoryJobStore(),
       "system_jobs": MemoryJobStore(),
@@ -171,11 +172,11 @@ class Scheduler(AsyncIOScheduler):
 
   @override
   def _real_add_job(self, job: Job, jobstore_alias: str, replace_existing: bool):
-    """
+    """Add a job to its store, applying defaults and computing the first run time.
+
     :param Job job: the job to add
     :param bool replace_existing: ``True`` to use update_job() in case the job already exists
         in the store
-
     """
     replacements = {key: value for key, value in self._job_defaults.items() if not hasattr(job, key)}
     # Calculate the next run time if there is none defined
@@ -212,16 +213,11 @@ class Scheduler(AsyncIOScheduler):
 
   @override
   def print_jobs(self, jobstore: str | None = None, out: TextIO | None = None):
-    """
-    print_jobs(jobstore=None, out=sys.stdout)
-
-    Prints out a textual listing of all jobs currently scheduled on either all job stores or
-    just a specific one.
+    """Print a textual listing of all jobs currently scheduled on one or all job stores.
 
     :param str|unicode jobstore: alias of the job store, ``None`` to list jobs from all stores
     :param file out: a file-like object to print to (defaults to  **sys.stdout** if nothing is
         given)
-
     """
     lines = []
     with self._jobstores_lock:

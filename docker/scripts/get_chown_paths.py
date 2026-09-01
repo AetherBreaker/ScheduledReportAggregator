@@ -1,3 +1,6 @@
+"""Print the deduplicated `[tool.docker]` chown_paths and mkdirs entries, one per line."""
+
+# Standard library imports
 import tomllib
 
 with open("/app/pyproject.toml", "rb") as f:

@@ -1,3 +1,6 @@
+"""Print `--extra app` for uv if pyproject.toml defines an `app` optional-dependency group."""
+
+# Standard library imports
 import tomllib
 
 with open("/app/pyproject.toml", "rb") as f:

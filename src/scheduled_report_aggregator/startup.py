@@ -1,3 +1,5 @@
+"""Boot sequence: builds the scheduler, registers all jobs, and runs until a fatal event."""
+
 # Standard library imports
 import sys
 from asyncio import CancelledError, create_task, run, sleep
@@ -6,12 +8,12 @@ from logging import getLogger
 from typing import TYPE_CHECKING
 
 # Third party imports
-from apscheduler.triggers.cron import CronTrigger
 from rich import get_console
 
 # First party imports
 from aeth_ext.errors.err_handling import FATAL_EVENT
 from aeth_ext.monitoring import run_heartbeat_async
+from apscheduler.triggers.cron import CronTrigger
 from scheduled_report_aggregator.custom_types import DayOfWeek
 from scheduled_report_aggregator.environment_init_vars import SETTINGS
 from scheduled_report_aggregator.jobs import HOLDING_FOLDER, BalanceSheetJob, TimeclockJob
@@ -48,6 +50,7 @@ jobs: tuple[tuple[type[JobBase], CronArgs], ...] = (
 
 
 async def reschedule_jobs() -> None:
+  """Wipe and re-register every job's schedule; runs at boot and again weekly."""
   if scheduler.running:
     scheduler.pause()
 
@@ -66,6 +69,7 @@ async def reschedule_jobs() -> None:
 
 
 async def main() -> NoReturn:  # sourcery skip: remove-empty-nested-block
+  """Boot the app, start the scheduler and heartbeat, then wait for a fatal event to exit."""
   HOLDING_FOLDER.mkdir(exist_ok=True)
   RICH_CONSOLE.rule("[bold red]Booting...[/]", style="bold red")
 

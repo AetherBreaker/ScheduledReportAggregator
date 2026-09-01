@@ -1,3 +1,5 @@
+"""Process-wide singletons resolved at import time: the Settings instance and working directory."""
+
 # Standard library imports
 import os
 from logging import getLogger

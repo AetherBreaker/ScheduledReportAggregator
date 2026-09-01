@@ -1,3 +1,5 @@
+"""PreToolUse hook that blocks Claude from editing protected files (.env, uv.lock)."""
+
 # Standard library imports
 import json
 import sys
@@ -7,6 +9,7 @@ PROTECTED_NAMES = {".env", "uv.lock"}
 
 
 def main():
+    """Deny the edit if the target file's name is one of the protected names."""
     data = json.load(sys.stdin)
     file_path = data.get("tool_input", {}).get("file_path", "")
     if not file_path:

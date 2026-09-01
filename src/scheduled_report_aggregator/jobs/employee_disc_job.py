@@ -1,3 +1,5 @@
+"""Daily job that publishes the employee/veterans discounts report to a Google Sheet."""
+
 # Standard library imports
 from csv import DictWriter, reader
 from dataclasses import asdict, dataclass
@@ -90,6 +92,8 @@ type SheetURL = str
 
 
 class EmployeeDiscountsJob(JobBase):
+  """Downloads the discounts report from SFT's SFTP and mirrors it into the report sheet."""
+
   creds = Credentials.from_service_account_file(SETTINGS.google_api_key_file, scopes=_DEFAULT_SCOPES)
   reschedule_delay_minutes: ClassVar[int] = 10
   email_recipients = (
@@ -101,6 +105,7 @@ class EmployeeDiscountsJob(JobBase):
   _spreadsheet_url = f"https://docs.google.com/spreadsheets/d/{_spreadsheet_id}/"
 
   def __post_init__(self) -> None:
+    """Register the report's remote location and prepare local holding/output folders."""
     self.file_details: tuple[tuple[FTPHandlerKey, FileKey, FileVars], ...] = (
       (
         "sft",
@@ -117,6 +122,7 @@ class EmployeeDiscountsJob(JobBase):
 
   @property
   def client(self) -> Client:
+    """A gspread client authorized with this job's service-account credentials."""
     return authorize(self.creds, http_client=BackOffHTTPClient)
 
   @override

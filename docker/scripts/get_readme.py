@@ -1,3 +1,5 @@
+"""Print the project's readme path from pyproject.toml, or nothing if unset."""
+
 # Standard library imports
 import tomllib
 

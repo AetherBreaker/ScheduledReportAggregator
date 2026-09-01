@@ -1,3 +1,5 @@
+"""Pydantic-settings model for this app's environment configuration and secret file locations."""
+
 # Standard library imports
 import sys
 from logging import getLogger
@@ -23,6 +25,8 @@ CWD = Path(__file__).parent if getattr(sys, "frozen", False) else Path.cwd()
 
 
 class Settings(BaseSettings):
+  """App settings sourced from the environment (and `.env` in debug), plus derived paths."""
+
   model_config = (
     SettingsConfigDict(
       env_file=CWD / ".env",
@@ -55,18 +59,22 @@ class Settings(BaseSettings):
 
   @property
   def sft_website_creds_file(self) -> Path:
+    """Path to the SFT website FTP credentials JSON, erroring if the file is missing."""
     return self._creds_file_reusable("SFT website creds file not found at expected location", "secrets", "sft_ftp_creds.json")
 
   @property
   def sas_ftp_creds_file(self) -> Path:
+    """Path to the SAS FTP credentials JSON, erroring if the file is missing."""
     return self._creds_file_reusable("SAS FTP creds file not found at expected location", "secrets", "sas_ftp_creds.json")
 
   @property
   def ryo_ftp_creds_file(self) -> Path:
+    """Path to the RYO FTP credentials JSON, erroring if the file is missing."""
     return self._creds_file_reusable("RYO FTP creds file not found at expected location", "secrets", "ryo_ftp_creds.json")
 
   @property
   def google_api_key_file(self) -> Path:
+    """Path to the Google service-account key JSON, erroring if the file is missing."""
     return self._creds_file_reusable(
       "Google API key file not found at expected location", "secrets", "scheduledreportaggregator-bdd6c704c6b1.json"
     )

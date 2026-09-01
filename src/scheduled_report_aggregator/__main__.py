@@ -1,3 +1,5 @@
+"""Application entry point: initializes aeth_ext then hands off to the async startup routine."""
+
 # Standard library imports
 from sys import platform
 

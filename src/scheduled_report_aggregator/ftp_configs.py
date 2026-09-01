@@ -1,3 +1,5 @@
+"""SFTP client classes for each remote server, wired to their credential files from Settings."""
+
 # Standard library imports
 from json import loads
 from logging import getLogger
@@ -21,6 +23,8 @@ __all__ = ["RYOSFTPClient", "SASSFTPClient", "SFTSFTPClient"]
 
 
 class SFTSFTPClient(SFTPProtocol):
+  """SFTP connection to the SFT website server."""
+
   policy = AutoAddPolicy()
   creds = loads(SETTINGS.sft_website_creds_file.read_text())
   KIND = ProtocolEnum.SFTP
@@ -62,6 +66,8 @@ class SFTSFTPClient(SFTPProtocol):
 
 
 class SASSFTPClient(SFTPProtocol):
+  """SFTP connection to the SAS server."""
+
   policy = AutoAddPolicy()
   creds = loads(SETTINGS.sas_ftp_creds_file.read_text())
   KIND = ProtocolEnum.SFTP
@@ -103,6 +109,8 @@ class SASSFTPClient(SFTPProtocol):
 
 
 class RYOSFTPClient(SFTPProtocol):
+  """SFTP connection to the RYO server."""
+
   policy = AutoAddPolicy()
   creds = loads(SETTINGS.ryo_ftp_creds_file.read_text())
   KIND = ProtocolEnum.SFTP

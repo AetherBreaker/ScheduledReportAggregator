@@ -1,3 +1,5 @@
+"""Stop hook that runs ruff project-wide (with safe autofixes) and reports remaining findings."""
+
 # Standard library imports
 import json
 import os
@@ -5,6 +7,7 @@ import subprocess
 
 
 def main():
+    """Run `ruff check --fix` and emit unfixed violations as Stop-hook additional context."""
     project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
     result = subprocess.run(
         # --unfixable F401 keeps ruff sorting/formatting imports (and applying
