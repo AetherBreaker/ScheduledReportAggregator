@@ -1,0 +1,97 @@
+{
+    "permissions": {
+        "allow": [
+            "Bash(uv run pytest *)",
+            "Read(//tmp/**)",
+            "Bash(mkdir -p \"/c/Users/Jacob/AppData/Local/Temp/claude/d--SFT-Software-Projects-aeth-ext/9caf092a-a67e-4998-9fa9-bdaf78bf86f1/scratchpad\")",
+            "Bash(git diff *)",
+            "Read(//c/Users/Jacob/AppData/Local/Temp/claude/d--SFT-Software-Projects-aeth-ext/9caf092a-a67e-4998-9fa9-bdaf78bf86f1/scratchpad/**)",
+            "Bash(git checkout *)",
+            "Bash(mkdir -p \".claude/hooks\")",
+            "WebSearch",
+            "Bash(uv sync *)",
+            "Bash(uv run ruff check *)",
+            "Bash(uv run pyright *)",
+            "Bash(git status *)",
+            "Bash(git log *)"
+        ],
+        "additionalDirectories": [
+            "d:\\SFT Software Projects\\aeth_ext\\.claude"
+        ]
+    },
+    "hooks": {
+        "PreToolUse": [
+            {
+                "matcher": "Edit|Write",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre_edit_protect.py\"",
+                        "shell": "bash"
+                    }
+                ]
+            },
+            {
+                "matcher": "Bash",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre_bash_protect_deps.py\"",
+                        "shell": "bash"
+                    }
+                ]
+            }
+        ],
+        "Stop": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop_ruff.py\"",
+                        "shell": "bash",
+                        "timeout": 30
+                    },
+                    {
+                        "type": "command",
+                        "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop_pyright.py\"",
+                        "shell": "bash",
+                        "timeout": 60
+                    }
+                ]
+            }
+        ]
+    },
+    "enabledMcpjsonServers": [
+        "github",
+        "context7"
+    ],
+    "enabledPlugins": {
+        "context7@claude-plugins-official": true,
+        "superpowers@claude-plugins-official": true,
+        "superpowers-lab@superpowers-marketplace": true,
+        "code-simplifier@claude-plugins-official": true,
+        "github@claude-plugins-official": true,
+        "claude-md-management@claude-plugins-official": true,
+        "feature-dev@claude-plugins-official": true,
+        "commit-commands@claude-plugins-official": true,
+        "pyright-lsp@claude-plugins-official": true,
+        "code-review@claude-plugins-official": true,
+        "security-guidance@claude-plugins-official": true,
+        "pr-review-toolkit@claude-plugins-official": true,
+        "explanatory-output-style@claude-plugins-official": true
+    },
+    "extraKnownMarketplaces": {
+        "claude-plugins-official": {
+            "source": {
+                "source": "github",
+                "repo": "anthropics/claude-plugins-official"
+            }
+        },
+        "superpowers-marketplace": {
+            "source": {
+                "source": "github",
+                "repo": "obra/superpowers-marketplace"
+            }
+        }
+    }
+}
