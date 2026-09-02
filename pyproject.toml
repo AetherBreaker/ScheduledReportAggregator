@@ -21,18 +21,18 @@
 
 [dependency-groups]
   dev = [
+    "aeth-devkit>=8.0.3",
     "apscheduler-stubs>=0.1.0.dev2",
     "pandas-stubs>=3.0.3.260530",
-    "aeth-devkit>=8.0.3",
     "poethepoet>=0.46.0",
-    "pytest>=8.0",
-    "types-python-dateutil>=2.9.0.20260518",
     "pyright>=1.1.411",
+    "pytest>=8.0",
     "pytest-asyncio>=0.24",
     "pytest-cov>=5.0",
     "ruff>=0.15",
     "tombi>=1.5",
-  ] # setup-project added: "poethepoet>=0.46.0" (was poethepoet>=0.47.0), "pyright>=1.1.411", "pytest>=8.0" (was pytest>=9.0.3), "pytest-asyncio>=0.24", "pytest-cov>=5.0", "ruff>=0.15", "tombi>=1.5"
+    "types-python-dateutil>=2.9.0.20260518",
+  ]                                           # setup-project added: "poethepoet>=0.46.0" (was poethepoet>=0.47.0), "pyright>=1.1.411", "pytest>=8.0" (was pytest>=9.0.3), "pytest-asyncio>=0.24", "pytest-cov>=5.0", "ruff>=0.15", "tombi>=1.5"
 
 [build-system]
   requires      = [
@@ -47,14 +47,14 @@
 [tool.coverage.report]
   show_missing = true
 
-  [tool.coverage.html]
-    directory = ".cache/htmlcov"
+[tool.coverage.html]
+  directory = ".cache/htmlcov"
 
-  [tool.coverage.xml]
-    output = ".cache/coverage.xml"
+[tool.coverage.xml]
+  output = ".cache/coverage.xml"
 
-  [tool.coverage.lcov]
-    output = ".cache/coverage.lcov"
+[tool.coverage.lcov]
+  output = ".cache/coverage.lcov"
 
 [tool.docker]
   # Paths relative to /app that the entrypoint will chown to nonroot:nonroot.
@@ -108,13 +108,7 @@
   executionEnvironments = [{ root = "src", extraPaths = ["src"] }]
 
 [tool.pytest.ini_options]
-  addopts      = [
-    "--cov",
-    "--cov-report=term-missing",
-    "--strict-markers",
-    "--strict-config",
-    "-ra"
-  ]
+  addopts      = ["--cov", "--cov-report=term-missing", "--strict-markers", "--strict-config", "-ra"]
   cache_dir    = ".cache/pytest"
   testpaths    = ["tests"]
   xfail_strict = true
@@ -123,7 +117,7 @@
 [tool.ruff]
   cache-dir = ".cache/ruff"
 
-  src = ["./src", "../*/src", "../*/python"] # setup-project added: "../*/src", "../*/python"
+  src = ["./src", "../*/src", "../*/python"]  # setup-project added: "../*/src", "../*/python"
 
   exclude = [
     ".bzr",
@@ -153,7 +147,7 @@
   indent-width = 2
   line-length  = 135
 
-[tool.ruff.lint]
+  [tool.ruff.lint]
     extend-select = [
       "A",
       "ANN001",
@@ -187,14 +181,14 @@
       "PIE790",
     ]
 
-  [tool.ruff.lint.flake8-type-checking]
-    runtime-evaluated-base-classes = [
-      "pydantic.dataclasses.PydanticDataclass",
-      "scheduled_report_aggregator.custom_types.IsPydantic",
-      "aeth_ext.types.IsPydanticSlots",
-    ]
+    [tool.ruff.lint.flake8-type-checking]
+      runtime-evaluated-base-classes = [
+        "pydantic.dataclasses.PydanticDataclass",
+        "scheduled_report_aggregator.custom_types.IsPydantic",
+        "aeth_ext.types.IsPydanticSlots",
+      ]
 
-[tool.ruff.lint.flake8-tidy-imports.banned-api."__future__.annotations"]
+    [tool.ruff.lint.flake8-tidy-imports.banned-api."__future__.annotations"]
       # Delivered by ruff exactly when violated, so the reasoning costs no context otherwise.
       msg = "Python 3.14 evaluates all annotations lazily (PEP 649) with or without this import. What it adds is PEP 563 stringification, which breaks pydantic, dataclasses.fields() introspection, and typing.get_type_hints."
 
@@ -214,41 +208,6 @@
 
   [tool.ruff.format]
     docstring-code-format = true
-
-[tool.uv]
-  environments = [
-    "sys_platform == 'linux'",
-    "sys_platform == 'win32'",
-  ]
-
-  [tool.uv.sources]
-    # aeth-ext                  = [
-    #   { index = "SFTPyPI" },
-    # ]
-    aeth-ext                  = [
-      { index = "SFTPyPI" },
-      # { index = "SFTPyPI", marker = "sys_platform == 'linux'" },
-      # { path = "../aeth_ext", editable = true, marker = "sys_platform == 'win32'" },
-    ]
-    # timeclock-entry-processor = [
-    #   { index = "SFTPyPI" },
-    # ]
-    timeclock-entry-processor = [
-      { index = "SFTPyPI" },
-      # { index = "SFTPyPI", marker = "sys_platform == 'linux'" },
-      # { path = "../timeclock_entry_processor", editable = true, marker = "sys_platform == 'win32'" }
-    ]
-    aeth-devkit                 = [
-      { index = "SFTPyPI" },
-      # , marker = "sys_platform == 'linux'"
-      # { path = "../aeth-devkit", editable = true, marker = "sys_platform == 'win32'" },
-    ]
-
-  [[tool.uv.index]]
-    name        = "SFTPyPI"
-    url         = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple"
-    publish-url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/"
-    explicit    = true
 
 [tool.tombi]
   toml-version = "v1.1.0"
@@ -282,3 +241,38 @@
     indent-table-key-value-pairs    = true
     key-value-equals-sign-alignment = true
     trailing-comment-alignment      = true
+
+[tool.uv]
+  environments = [
+    "sys_platform == 'linux'",
+    "sys_platform == 'win32'",
+  ]
+
+  [tool.uv.sources]
+    # aeth-ext                  = [
+    #   { index = "SFTPyPI" },
+    # ]
+    aeth-ext                  = [
+      { index = "SFTPyPI" },
+      # { index = "SFTPyPI", marker = "sys_platform == 'linux'" },
+      # { path = "../aeth_ext", editable = true, marker = "sys_platform == 'win32'" },
+    ]
+    # timeclock-entry-processor = [
+    #   { index = "SFTPyPI" },
+    # ]
+    timeclock-entry-processor = [
+      { index = "SFTPyPI" },
+      # { index = "SFTPyPI", marker = "sys_platform == 'linux'" },
+      # { path = "../timeclock_entry_processor", editable = true, marker = "sys_platform == 'win32'" }
+    ]
+    aeth-devkit               = [
+      { index = "SFTPyPI" },
+      # , marker = "sys_platform == 'linux'"
+      # { path = "../aeth-devkit", editable = true, marker = "sys_platform == 'win32'" },
+    ]
+
+  [[tool.uv.index]]
+    name        = "SFTPyPI"
+    url         = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple"
+    publish-url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/"
+    explicit    = true
