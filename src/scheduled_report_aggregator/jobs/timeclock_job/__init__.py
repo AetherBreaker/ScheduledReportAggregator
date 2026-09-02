@@ -449,6 +449,12 @@ class TimeclockJob(JobBase):
       for store, allotted_hrs, training_hrs in zip(stores_col, alloted_col, training_col, strict=False):
         if not store or not allotted_hrs:
           continue  # skip rows with missing values
+        if store[0] is not None and not allotted_hrs[0] and not training_hrs[0]:
+          # Placeholder row for a not-yet-open store: only the store number is filled in. Skipping
+          # is equivalent to validating it -- downstream treats an absent store as 0 allotted and 0
+          # training hours -- so this is not worth an error-level log line every week.
+          logger.debug("Skipping placeholder row for store '%s' in allotted hours sheet '%s'", store[0], sheet_tab_name)
+          continue
         try:
           validated_row = AllottedHoursModel.model_validate(
             {"store": store[0], "allotted_hours": allotted_hrs[0], "training_hours": training_hrs[0]}
