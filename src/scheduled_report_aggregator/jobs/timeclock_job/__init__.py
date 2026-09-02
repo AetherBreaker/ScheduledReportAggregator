@@ -180,8 +180,6 @@ def get_shared_queue() -> Queue:
   return _mp_queue
 
 
-
-
 MAX_STORENUM = 999
 
 
@@ -632,6 +630,9 @@ if __name__ == "__main__":
   import winloop as asyncio
 
   # First party imports
+  from aeth_ext import initialize
+
+  initialize(asyncio=True, logging=True)
   # csv_file = CWD / "Time-Clock-Entry-Report_2026-05-14_19-31-12.csv"
   # TimeclockJob().run_processor(csv_file)
   # from scheduled_report_aggregator.custom_types import DayOfWeek
