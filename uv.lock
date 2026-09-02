@@ -24,7 +24,7 @@ wheels = [
 
 [[package]]
 name = "aeth-ext"
-version = "6.3.1"
+version = "8.0.8"
 source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }
 dependencies = [
     { name = "aiologic", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
@@ -38,9 +38,9 @@ dependencies = [
     { name = "tzdata", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "watchfiles", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]
-sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/227/2d6c2ee5f30ad/aeth_ext-6.3.1.tar.gz", hash = "sha256:2272d6c2ee5f30ad916fb012ec9172b0ffc924138a1556c9897aab2e9e7bcdb2" }
+sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/46b/575ca0237216c/aeth_ext-8.0.8.tar.gz", hash = "sha256:46b575ca0237216cd8bdbbc4142622c01c3c0751d398676e234e6d757bd414fb" }
 wheels = [
-    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/6cc/4f55c3b1df56d/aeth_ext-6.3.1-py3-none-any.whl", hash = "sha256:6cc4f55c3b1df56d0e998fb709dab3a61582919797c594a729429e50f1e5a527" },
+    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/130/3d75e96b6dd61/aeth_ext-8.0.8-py3-none-any.whl", hash = "sha256:1303d75e96b6dd61396f1046776ecf776fb4f1d3caf38fe8b3b2da61b1e9f77e" },
 ]
 
 [package.optional-dependencies]
@@ -1264,7 +1264,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aeth-ext", extras = ["sftp", "async"], specifier = ">=6.2.2,<7", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
+    { name = "aeth-ext", extras = ["sftp", "async"], specifier = ">=8.0.8", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
     { name = "aiologic", specifier = ">=0.16.0" },
     { name = "apscheduler", specifier = ">=3.11.2" },
     { name = "gspread", specifier = ">=6.2.1" },
@@ -1273,7 +1273,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.14.1" },
     { name = "python-dateutil", specifier = ">=2.9.0.post0" },
     { name = "rich", specifier = ">=15.0.0" },
-    { name = "timeclock-entry-processor", specifier = ">=1.10.1", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
+    { name = "timeclock-entry-processor", specifier = ">=2.0.0", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
 ]
 
 [package.metadata.requires-dev]
@@ -1320,7 +1320,7 @@ wheels = [
 
 [[package]]
 name = "timeclock-entry-processor"
-version = "1.10.3"
+version = "2.0.0"
 source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }
 dependencies = [
     { name = "aeth-ext", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
@@ -1335,9 +1335,9 @@ dependencies = [
     { name = "uvloop", marker = "sys_platform == 'linux'" },
     { name = "winloop", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/55c/f27aff198c254/timeclock_entry_processor-1.10.3.tar.gz", hash = "sha256:55cf27aff198c254155013832edf343774713e6b42ea6028c1e5a86af8fbbc16" }
+sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/66e/9e6bae326bcc8/timeclock_entry_processor-2.0.0.tar.gz", hash = "sha256:66e9e6bae326bcc8b7d198745d027a059e2a76f198554e004a5a2338e423c462" }
 wheels = [
-    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/194/64af27446412b/timeclock_entry_processor-1.10.3-py3-none-any.whl", hash = "sha256:19464af27446412bf970787f70e1f1309c19ee5e9fb64f1250f3a4092f4cdffb" },
+    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/62e/babd4c9e99818/timeclock_entry_processor-2.0.0-py3-none-any.whl", hash = "sha256:62ebabd4c9e99818dc24a943e13a66f3c1882f08937d3eca18730581a02cb691" },
 ]
 
 [[package]]
