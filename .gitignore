@@ -240,7 +240,6 @@ PYCACHE/
 *.ttf
 timeclock_playground/
 /manifest.json
-!.mcp.json
 
 /tax_project_files
 *.code-workspace
