@@ -30,8 +30,6 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 
-
-
 class FlipSheetJob(JobBase):
   """Duplicates the base sheet into per-week tabs, pruning old ones and protecting headers."""
 
@@ -152,14 +150,11 @@ def main_test():
 
 if __name__ == "__main__":
   # First party imports
-  # csv_file = CWD / "Time-Clock-Entry-Report_2026-05-14_19-31-12.csv"
-  # TimeclockJob().run_processor(csv_file)
-  # from scheduled_report_aggregator.custom_types import DayOfWeek
-  # from scheduled_report_aggregator.scheduler_config import Scheduler
+  from aeth_ext import initialize
 
-  # scheduler = Scheduler.init_scheduler()
-
+  initialize(asyncio=True, logging="socket")
   job = FlipSheetJob()
+  job.main_job()
   # job.init_job(
   #   scheduler=scheduler,
   #   job_id="test",
@@ -169,5 +164,5 @@ if __name__ == "__main__":
   # result = job.calculate_overunder_hours(job.load_manifest(CWD / "manifest.json"))
   # job.send_results(result)
 
-  main_test()
+  # main_test()
   pass

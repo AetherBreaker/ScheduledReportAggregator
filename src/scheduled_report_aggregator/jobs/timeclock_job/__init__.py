@@ -10,7 +10,7 @@ if __name__ == "__main__":
 from asyncio import StreamReader, create_subprocess_exec
 from asyncio.tasks import create_task, gather
 from atexit import register
-from datetime import date
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from io import StringIO
 from json import load
@@ -19,6 +19,7 @@ from multiprocessing import Queue
 from multiprocessing.managers import BaseManager
 from os import environ
 from pathlib import Path
+from re import compile
 from secrets import token_bytes
 from shutil import get_terminal_size, which
 from subprocess import PIPE, CalledProcessError
@@ -27,7 +28,7 @@ from typing import TYPE_CHECKING, NamedTuple, Self, TextIO, override
 
 # Third party imports
 from dateutil.relativedelta import relativedelta
-from dateutil.rrule import MO, SU, WEEKLY, rrule
+from dateutil.rrule import DAILY, MO, SA, SU, WEEKLY, rrule
 from gspread.auth import authorize
 from gspread.http_client import BackOffHTTPClient
 from gspread.utils import DateTimeOption, Dimension, ValueRenderOption
@@ -36,13 +37,14 @@ from pandas import notna, read_csv
 # First party imports
 from aeth_ext.central_log_server.client import AsyncioQueueDrainer
 from aeth_ext.types import EmailMessageParts
-from aeth_ext.utils import batch_send_emails, prepare_email_message
+from aeth_ext.utils import batch_send_emails, prepare_email_message, today
 from scheduled_report_aggregator.environment_init_vars import CWD, SETTINGS
 from scheduled_report_aggregator.jobs.base import CanRescheduleJobError, JobBase
 from scheduled_report_aggregator.jobs.timeclock_job.allotted_hours_model import AllottedHoursModel
 
 if TYPE_CHECKING:
   # Standard library imports
+  from re import Pattern
   from types import TracebackType
 
   # Third party imports
@@ -84,6 +86,29 @@ def newest_manual_employee_list() -> Path:
   except (OSError, ValueError) as e:
     # OSError: the folder is absent or unreadable. ValueError: `max()` on an empty folder.
     raise CanRescheduleJobError(f"no employee list available in {SETTINGS.timeclock_employee_input_loc}", count_error=True) from e
+
+
+def assemble_schedule_report_filename_pattern(now: datetime | None = None) -> Pattern[str]:
+  """Regex matching schedule reports whose generation date falls in `now`'s Sunday-Saturday week.
+
+  The filename's dash-separated ISO date (`Automated-Schedule-Report_2026-08-25_12-01-18.csv`) lets
+  the week's seven dates be enumerated wholesale, so no year/month/day cross-product is needed and
+  no out-of-week date can slip through at a month or year boundary.
+  """
+  now = today(tzinfo=SETTINGS.tz) if now is None else now
+  dates = rrule(
+    DAILY,
+    dtstart=now - relativedelta(weekday=SU(-1), hour=0, minute=0, second=0, microsecond=0),
+    until=now + relativedelta(weekday=SA(+1), hour=23, minute=59, second=59, microsecond=999999),
+  )
+  dates_part = "|".join(sorted({dt.strftime("%Y-%m-%d") for dt in dates}))
+  return compile(
+    r"^Automated-Schedule-Report_"
+    r"(?P<timestamp>"
+    rf"(?P<date>{dates_part})"
+    r"_(?P<hour>\d{2})-(?P<minute>\d{2})-(?P<second>\d{2})"
+    r")\.csv$"
+  )
 
 
 WEEK_DATA_EXPECTED_COLUMNS = (
@@ -240,9 +265,9 @@ class TimeclockJob(JobBase):
     return authorize(self.creds, http_client=BackOffHTTPClient)
 
   @override
-  async def main_job(self) -> None:
+  async def main_job(self, shift: timedelta | None = None) -> None:
     logger.info("TimeclockJob starting")
-    next_report = await self.get_next_timeclock_report()
+    next_report = await self.get_next_timeclock_report(shift)
     logger.info("Schedule report acquired: %s", next_report.name)
 
     manifest_data = await self.run_processor(next_report)
@@ -256,21 +281,39 @@ class TimeclockJob(JobBase):
     self.send_results(overunder_data)
     logger.info("TimeclockJob finished")
 
-  async def get_next_timeclock_report(self) -> Path:
-    """Download this week's newest schedule report from SFTP, rescheduling if none exists yet."""
+  async def get_next_timeclock_report(self, shift: timedelta | None = None) -> Path:
+    """Download the targeted week's newest schedule report from SFTP, rescheduling if none exists yet.
+
+    The targeted week is the current Sunday-Saturday week, offset by `shift` when given (testing, or
+    rerunning a previous week). Candidates are filtered by the generation timestamp in the filename
+    *before* taking the newest, so a shifted run is never blinded by newer files from other weeks.
+    """
+    now = today(tzinfo=SETTINGS.tz)
+    if shift is not None:
+      now += shift
+    pattern = assemble_schedule_report_filename_pattern(now)
+
     logger.debug("Connecting to FTP to retrieve schedule report from %s", self.reports_pickup_folder)
     with self.ftp_session("sft") as ftp:
       remote_files = list(ftp.listdir(self.reports_pickup_folder.as_posix()))
       logger.debug("Found %d remote file(s) in pickup folder", len(remote_files))
 
+      filtered_files = filter(lambda f: pattern.match(f.filename), remote_files)
+
       try:
-        youngest_file = max(remote_files, key=lambda f: f.modified_time)
+        youngest_file = max(filtered_files, key=lambda f: f.modified_time)
       except ValueError:
         raise CanRescheduleJobError(
-          "Error in locating timeclock schedule report", reason=f"No schedule files in {self.reports_pickup_folder}", count_error=False
+          "Error in locating timeclock schedule report",
+          reason=f"No schedule files for the targeted week in {self.reports_pickup_folder}",
+          count_error=False,
         ) from None
 
-      if self.check_if_this_week(youngest_file.modified_time.astimezone(SETTINGS.tz)):
+      matched = pattern.match(youngest_file.filename)
+      assert matched is not None
+      timestamp = datetime.strptime(matched.group("timestamp"), "%Y-%m-%d_%H-%M-%S").replace(tzinfo=SETTINGS.tz)
+
+      if self.check_if_this_week(timestamp, shift):
         remote_file = self.reports_pickup_folder / youngest_file.filename
         local_file = self.schedule_local_holding / youngest_file.filename
         logger.debug("Downloading report: %s", youngest_file.filename)
@@ -283,8 +326,8 @@ class TimeclockJob(JobBase):
 
       else:
         raise CanRescheduleJobError(
-          "No schedule files from this week",
-          reason=f"Youngest file {youngest_file.filename} modified at {youngest_file.modified_time} is not from this week",
+          "No schedule files from the targeted week",
+          reason=f"Youngest matching file {youngest_file.filename} (generated {timestamp}) is not from the targeted week",
           count_error=False,
         ) from None
 
@@ -632,7 +675,7 @@ if __name__ == "__main__":
   # First party imports
   from aeth_ext import initialize
 
-  initialize(asyncio=True, logging=True)
+  initialize(asyncio=True, logging="socket")
   # csv_file = CWD / "Time-Clock-Entry-Report_2026-05-14_19-31-12.csv"
   # TimeclockJob().run_processor(csv_file)
   # from scheduled_report_aggregator.custom_types import DayOfWeek
@@ -652,7 +695,7 @@ if __name__ == "__main__":
 
   # job.get_allotted_hours([date(2026, 7, 26)])
 
-  asyncio.run(job.main_job())
+  asyncio.run(job.main_job(shift=timedelta(weeks=-1)))
   # inp_file = CWD / "example files" / "Automated-Schedule-Report_2026-07-07_12-00-28.csv"
 
   # asyncio.run(job.test_job_specific_file(inp_file))

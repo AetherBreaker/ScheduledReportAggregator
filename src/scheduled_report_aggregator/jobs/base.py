@@ -453,9 +453,11 @@ class JobBase(metaclass=SingletonTypeABC):
     self.reschedule_self(**new_args)
 
   @staticmethod
-  def check_if_this_week(dt: datetime) -> bool:
-    """Whether the given datetime falls in the current Sunday-through-Saturday week."""
+  def check_if_this_week(dt: datetime, shift: timedelta | None = None) -> bool:
+    """Whether the given datetime falls in the current (optionally shifted) Sunday-through-Saturday week."""
     now_day = today(tzinfo=SETTINGS.tz)
+    if shift is not None:
+      now_day += shift
     start_of_week = now_day - relativedelta(weekday=SU(-1))
     end_of_week = start_of_week + relativedelta(weekday=SA(+1), hour=23, minute=59, second=59, microsecond=999999)
     return start_of_week <= dt <= end_of_week
