@@ -1232,7 +1232,7 @@ wheels = [
 
 [[package]]
 name = "scheduled-report-aggregator"
-version = "2.4.5"
+version = "3.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "aeth-ext", extra = ["async", "sftp"], marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
