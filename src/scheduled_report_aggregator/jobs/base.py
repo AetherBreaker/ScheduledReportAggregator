@@ -22,7 +22,7 @@ from pydantic import SecretStr
 from pydantic.dataclasses import dataclass
 
 # First party imports
-from aeth_ext.errors import trigger_shutdown
+from aeth_ext.errors.err_handling import trigger_shutdown
 from aeth_ext.errors.shutdown import ShutdownKind, run_shutdown
 from aeth_ext.ftp import create_ftp_adapter
 from aeth_ext.ftp.credentials import SFTPCredentials
