@@ -430,7 +430,10 @@ class BalanceSheetJob(JobBase):
 
 
 if __name__ == "__main__":
-  # Standard library imports
+  # First party imports
+  from aeth_ext import initialize
+
+  initialize(asyncio=True, logging=True)
   test_job = BalanceSheetJob()
 
   test_job.main_job()
