@@ -1,11 +1,10 @@
 """Boot sequence: builds the scheduler, registers all jobs, and runs until a fatal event."""
 
 # Standard library imports
-from asyncio import CancelledError, create_task, run
+from asyncio import CancelledError, create_task
 from contextlib import suppress
 from inspect import isawaitable
 from logging import INFO, WARNING, getLogger
-from sys import exit as sys_exit
 from typing import TYPE_CHECKING
 
 # Third party imports
@@ -64,28 +63,6 @@ async def reschedule_jobs() -> None:
 
   if scheduler.running:
     scheduler.resume()
-
-
-def exit_code_for_shutdown(kind: ShutdownKind) -> int:
-  """0 for RUNNING (never requested) or GRACEFUL, 1 for FATAL or FORCED.
-
-  `ShutdownKind` is an IntEnum ordered by severity. Kept out of `main()` so `main()` never calls
-  `sys.exit` itself.
-  """
-  return 1 if kind >= ShutdownKind.FATAL else 0
-
-
-def run_until_shutdown() -> None:
-  """Run `main()` to completion and exit the interpreter with a code that reflects how the app stopped."""
-  try:
-    run(main())
-  except KeyboardInterrupt:
-    # aeth_ext's exit nudge (simulated SIGINT). Normally main() returns on its own after awaiting
-    # SHUTDOWN_COMPLETE and the nudge is skipped; it lands here only if main()'s tail or asyncio's
-    # own close outran the shutdown budget. Not an error either way; the kind below says how we
-    # stopped.
-    pass
-  sys_exit(exit_code_for_shutdown(SHUTDOWN.kind))
 
 
 async def main() -> None:  # sourcery skip: remove-empty-nested-block
@@ -154,7 +131,7 @@ async def main() -> None:  # sourcery skip: remove-empty-nested-block
   # `await SHUTDOWN` resolves when a shutdown is *requested* (fatal exception, JobError, signal);
   # aeth_ext's threaded teardown pass has started but not finished. Freeze the scheduler so no new
   # job fires into a process that is going away, then wait for the pass before returning so the
-  # normal path exits via `run_until_shutdown`'s `sys.exit`, not via the exit nudge.
+  # normal path exits via `run_app`'s `SystemExit` (in `__main__`), not via the exit nudge.
   logger.log(INFO if SHUTDOWN.kind is ShutdownKind.GRACEFUL else WARNING, "Shutdown requested (%s); stopping", SHUTDOWN.kind.name)
 
   periodic_heartbeat_task.cancel()
@@ -168,7 +145,3 @@ async def main() -> None:  # sourcery skip: remove-empty-nested-block
     logger.exception("Shutdown: failed to stop the scheduler cleanly")
 
   await SHUTDOWN_COMPLETE
-
-
-if __name__ == "__main__":
-  run_until_shutdown()
