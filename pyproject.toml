@@ -64,7 +64,7 @@
   ]
   # Compose services setup-project validates against the standard; the only Docker switch.
   # Empty = no Docker handling. Side services (wireguard, ...) are simply not listed.
-  services                = []
+  services                = ["scheduled-report-aggregator"]
   # Paths relative to /app the entrypoint guarantees exist, are backed by a bind mount (the
   # path itself or an ancestor) and are owned by nonroot. Sub-paths of a mount are created
   # on the mounted filesystem. Ephemeral scratch dirs do not belong here (or under /app at
