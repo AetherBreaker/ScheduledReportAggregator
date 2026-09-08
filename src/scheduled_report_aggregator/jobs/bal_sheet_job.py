@@ -446,6 +446,6 @@ if __name__ == "__main__":
   #     sas=HOLDING_FOLDER / "balancesheetjob" / "sas" / "Sweet_Fire_2026-06-17T03_31_24.476.csv",
   #   )
   # )
-  # report_path = CWD / "file_holding" / "balancesheetjob" / "output" / "sas_ryo_balance_sheet_20260617093924911622.csv"
+  # report_path = HOLDING_FOLDER / "balancesheetjob" / "output" / "sas_ryo_balance_sheet_20260617093924911622.csv"
 
   # test_job.email_report(report_path)

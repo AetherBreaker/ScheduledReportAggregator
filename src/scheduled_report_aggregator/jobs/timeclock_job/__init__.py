@@ -38,7 +38,7 @@ from pandas import notna, read_csv
 from aeth_ext.central_log_server.client import AsyncioQueueDrainer
 from aeth_ext.types import EmailMessageParts
 from aeth_ext.utils import batch_send_emails, prepare_email_message, today
-from scheduled_report_aggregator.environment_init_vars import CWD, SETTINGS
+from scheduled_report_aggregator.environment_init_vars import CWD, SCRATCH_DIR, SETTINGS
 from scheduled_report_aggregator.jobs.base import CanRescheduleJobError, JobBase
 from scheduled_report_aggregator.jobs.timeclock_job.allotted_hours_model import AllottedHoursModel
 
@@ -57,7 +57,7 @@ logger = getLogger(__name__)
 
 __all__ = ["TimeclockJob"]
 
-TIMECLOCK_PLAYGROUND = CWD / "timeclock_playground"
+TIMECLOCK_PLAYGROUND = SCRATCH_DIR / "timeclock_playground"
 SUBPROCESS_EMPLOYEE_INPUT = TIMECLOCK_PLAYGROUND / "employee_input"
 SUBPROCESS_FONT_INPUT = TIMECLOCK_PLAYGROUND / "font_input"
 SUBPROCESS_OUTPUT_FOLDER = TIMECLOCK_PLAYGROUND / "output"
@@ -231,7 +231,7 @@ class TimeclockJob(JobBase):
 
     self.manifest_path.touch(exist_ok=True)
     self.output_folder.mkdir(exist_ok=True)
-    TIMECLOCK_PLAYGROUND.mkdir(exist_ok=True)
+    TIMECLOCK_PLAYGROUND.mkdir(parents=True, exist_ok=True)
 
     # ensure manifest file is empty
     self.manifest_path.write_text("")
@@ -707,5 +707,5 @@ if __name__ == "__main__":
   # asyncio.run(job.test_job_specific_file(inp_file))
   # job.test_last_run()
   # asyncio.run(
-  #   job.run_processor(CWD / "file_holding" / "timeclockjob" / "schedule_reports" / "Automated-Schedule-Report_2026-07-28_12-02-37.csv")
+  #   job.run_processor(HOLDING_FOLDER / "timeclockjob" / "schedule_reports" / "Automated-Schedule-Report_2026-07-28_12-02-37.csv")
   # )

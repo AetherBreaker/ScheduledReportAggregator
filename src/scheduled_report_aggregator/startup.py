@@ -8,12 +8,12 @@ from logging import INFO, WARNING, getLogger
 from typing import TYPE_CHECKING
 
 # Third party imports
+from apscheduler.triggers.cron import CronTrigger
 from rich import get_console
 
 # First party imports
 from aeth_ext.errors.shutdown import SHUTDOWN, SHUTDOWN_COMPLETE, ShutdownKind
 from aeth_ext.monitoring import run_heartbeat_async
-from apscheduler.triggers.cron import CronTrigger
 from scheduled_report_aggregator.custom_types import DayOfWeek
 from scheduled_report_aggregator.environment_init_vars import SETTINGS
 from scheduled_report_aggregator.jobs import HOLDING_FOLDER, BalanceSheetJob, TimeclockJob
@@ -67,7 +67,7 @@ async def reschedule_jobs() -> None:
 
 async def main() -> None:  # sourcery skip: remove-empty-nested-block
   """Boot the app, start the scheduler and heartbeat, then wait for a shutdown to be requested."""
-  HOLDING_FOLDER.mkdir(exist_ok=True)
+  HOLDING_FOLDER.mkdir(parents=True, exist_ok=True)
   RICH_CONSOLE.rule("[bold red]Booting...[/]", style="bold red")
 
   periodic_heartbeat_task = create_task(

@@ -62,7 +62,6 @@
   chown_paths = [
     "persisted_data",
   ]
-  mkdirs      = ["file_holding", "timeclock_playground"]
 
 [tool.poe]
   include_script = [{ script = "aeth_devkit:tasks", executor = { type = "uv", frozen = true } }]
