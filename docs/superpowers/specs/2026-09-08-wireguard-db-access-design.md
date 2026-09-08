@@ -3,11 +3,12 @@
 Date: 2026-09-08. Status: architecture approved in discussion; the open decisions in section 9
 must be answered before implementation plans are written. Plans are written in separate sessions.
 
-Companion spec (the tooling that makes this possible):
-`aeth_devkit/docs/superpowers/specs/2026-09-08-devkit-split-and-container-wireguard-design.md`.
-Nothing in this document can be implemented until steps 1 and 2 of that spec's section 7 have
-shipped: the extracted `devkit-container` with its wireguard mode, and the
-`[tool.docker].wireguard` switch in `setup-project`.
+Companion specs (the tooling that makes this possible), both under
+`aeth-devkit/docs/superpowers/specs/`: `2026-09-08-devkit-split-design.md`, whose step 1 of
+section 7 extracts `devkit-container` into its own repo as a wheel, and
+`2026-09-08-container-wireguard-mode-design.md`, which adds the wireguard mode to that binary and
+the `[tool.docker].wireguard` switch to `setup-project`. Nothing in this document can be
+implemented until both have shipped.
 
 ## 1. Goal and constraints
 
@@ -50,7 +51,8 @@ Why this satisfies every constraint:
   applies unchanged; the smoke tests in the container repo assert empty capability sets.
 - **Nothing about Coolify conventions changes.** One service, the same container name, the same
   network, the same heartbeat healthcheck. The compose file gains `cap_add`, `devices`, `sysctls`
-  and `WG_*` environment lines, which `setup-project` renders and the compose validator ignores.
+  and `WG_*` environment lines, which `setup-project` renders into a new file and its compose
+  rules add to an existing one.
 - **Monitoring folds into what exists.** The entrypoint writes `/run/devkit/wireguard.json`; the
   app reads it and a stale tunnel becomes an ordinary `aeth_ext` alert over email and Pushover, and
   healthchecks.io keeps seeing one heartbeat per app. The `aeth_ext` reader is follow-on work.
@@ -164,9 +166,9 @@ Recommended, to be confirmed: **native WireGuard for Windows**, not Docker Deskt
 ### 6.3 The test project
 
 A devkit-managed Python project deployed through Coolify exactly like this one, with
-`[tool.docker].wireguard = true` and the same `devkit-container` pin. Its app is a loop that
-resolves the DB host over the tunnel, runs a trivial query, and logs the result, plus a
-hello-world so the standard scaffolding is exercised. It has its own key, address and
+`[tool.docker].wireguard = true` and the same `devkit-container` version in `uv.lock`. Its app is
+a loop that resolves the DB host over the tunnel, runs a trivial query, and logs the result, plus
+a hello-world so the standard scaffolding is exercised. It has its own key, address and
 healthchecks slug. It exists so connectivity and queries can be tested without touching this
 project.
 
