@@ -19,52 +19,7 @@
             "d:\\SFT Software Projects\\aeth_ext\\.claude"
         ]
     },
-    "hooks": {
-        "PreToolUse": [
-            {
-                "matcher": "Edit|Write",
-                "hooks": [
-                    {
-                        "type": "command",
-                        "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre_edit_protect.py\"",
-                        "shell": "bash"
-                    }
-                ]
-            },
-            {
-                "matcher": "Bash",
-                "hooks": [
-                    {
-                        "type": "command",
-                        "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre_bash_protect_deps.py\"",
-                        "shell": "bash"
-                    }
-                ]
-            }
-        ],
-        "Stop": [
-            {
-                "hooks": [
-                    {
-                        "type": "command",
-                        "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop_ruff.py\"",
-                        "shell": "bash",
-                        "timeout": 30
-                    },
-                    {
-                        "type": "command",
-                        "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop_pyright.py\"",
-                        "shell": "bash",
-                        "timeout": 60
-                    }
-                ]
-            }
-        ]
-    },
-    "enabledMcpjsonServers": [
-        "github",
-        "context7"
-    ],
+    "enabledMcpjsonServers": ["github", "context7"],
     "enabledPlugins": {
         "context7@claude-plugins-official": true,
         "superpowers@claude-plugins-official": true,
