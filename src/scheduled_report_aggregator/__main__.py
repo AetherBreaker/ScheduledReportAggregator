@@ -14,7 +14,6 @@ RICH_CONSOLE = Console(
   log_time=platform == "win32",
 )
 PROJECT_NAME = "scheduled-report-aggregator"
-HEARTBEAT_SLUG = "scheduled-report-aggregator"
 # TESTING = __debug__
 
 
