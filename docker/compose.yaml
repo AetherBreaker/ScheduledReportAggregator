@@ -17,6 +17,16 @@ services:
       - ALERTS_EMAIL_PWD=${ALERTS_EMAIL_PWD:?}
       - ALERTS_RECIPIENTS=["jacob.ogden@sweetfiretobacco.com"]
       - HEARTBEAT_SLUG=scheduled-report-aggregator
+      - WG_PRIVATE_KEY=${WG_PRIVATE_KEY:?}
+      - WG_ADDRESS=${WG_ADDRESS:?}
+      - WG_PEER_PUBLIC_KEY=${WG_PEER_PUBLIC_KEY:?}
+      - WG_PEER_ENDPOINT=${WG_PEER_ENDPOINT:?}
+      - WG_PEER_ALLOWED_IPS=${WG_PEER_ALLOWED_IPS:?}
+      - WG_PEER_PRESHARED_KEY=${WG_PEER_PRESHARED_KEY:-}
+      - WG_PERSISTENT_KEEPALIVE=${WG_PERSISTENT_KEEPALIVE:-}
+      - WG_HANDSHAKE_TIMEOUT_SECS=${WG_HANDSHAKE_TIMEOUT_SECS:-}
+      - WG_POLL_SECS=${WG_POLL_SECS:-}
+      - WG_STALE_SECS=${WG_STALE_SECS:-}
     networks:
       - coolify
     healthcheck:
@@ -24,10 +34,16 @@ services:
         - CMD
         - /app/.venv/bin/devkit-container
         - healthcheck
+        - --file
+        - /app/persisted_data/logs/heartbeat.txt
+        - --file
+        - /app/persisted_data/logs/wireguard-heartbeat.txt
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 15s
+      start_period: 90s
+    cap_add:
+      - NET_ADMIN
 
 networks:
   coolify:
