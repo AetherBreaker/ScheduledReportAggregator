@@ -1,0 +1,142 @@
+# The office database PC as a tunnel peer: options, costs, the ruling, and the install
+
+Date: 2026-09-15. Status: ruled by the owner (section 4). Parent design: the hub design
+`2026-09-14-hub-fetched-peer-config-design.md` in `wireguard-hub`, sections 10.2, 11 and 16,
+which this document refines and which records the ruling under its rule 0.2.
+
+## 1. The question
+
+The office PC runs MSSQL natively as a Windows service and must be reachable from the VPS spokes
+over the WireGuard tunnel at `10.8.0.10`. The hub design says "not a container: WireGuard for
+Windows, the conf asset from the hub's release". The owner wanted, beyond the tunnel, a continuous
+health signal for the tunnel, for the PC being online, and for the MSSQL service, and asked how
+that changes the choice. Docker Desktop on the PC was considered and ruled out by the owner.
+
+Two facts fixed the analysis. The database is native, so the tunnel address must land on the
+Windows host itself or MSSQL only ever sees the container VM as the caller, and the per-source
+firewall rule planned for the next phase becomes impossible. The PC may sit at the login screen
+after a reboot; the owner can change that, so it is a cost, not a blocker.
+
+## 2. Considerations that apply to every option
+
+- **Windows classifies the tunnel interface as a Public network.** A MSSQL firewall rule written
+  for the Domain or Private profile does not apply to it. Rules must cover all profiles or name
+  the interface.
+- **MSSQL's edition and instance shape are unknown.** Express and named instances ship with TCP
+  off and a dynamic port found through SQL Browser. The tunnel wants one static port. The next
+  phase starts there.
+- **A query-based check needs credentials.** From the hub or a spoke that is a SQL login stored as
+  a secret. An agent on the PC can use Windows integrated authentication as the account it runs
+  under, with no password on disk.
+- **"Offline" has three causes and one look.** PC off, WireGuard service stopped, and health agent
+  dead all present as silence on healthchecks.io. Two independent signals, one from the PC and
+  one from the hub, separate them.
+- **Planned reboots page whoever holds the alerts.** Windows Update restarts the PC. A Windows
+  service receives a pre-shutdown notice and could send a pause ping; a scheduled task gets none.
+  A grace period of ten minutes or so covers a reboot either way.
+- **Anything installed on the PC is new surface.** An unsigned exe trips SmartScreen and antivirus
+  and a signing certificate costs yearly. A Python tool through uv avoids that but puts uv on the
+  PC; installing from the public GitHub release avoids holding an SFTPyPI credential there.
+- **The office side of the path is untested until first-deploy check 4:** outbound UDP from the
+  LAN, the router's NAT timeout against the 25 s keepalive, and the PC's sleep settings.
+- **The WireGuard client keeps the private key encrypted with DPAPI**, readable by
+  administrators only. Every container route would have put the key in an env file.
+
+## 3. The options and their cost
+
+Build is agent session effort including tests, docs and releases. Owner is hands-on time to
+install, review and verify. Yearly is routine upkeep, excluding incident response. Plus or minus
+half.
+
+| Option | Build (h) | Owner (h) | Yearly (h) | Reports |
+| --- | --- | --- | --- | --- |
+| A. WireGuard for Windows only | 0.5 | 1 | 1 | Nothing; failures surface through the aggregator's jobs |
+| D. The hub probes every peer | 4 to 6 | 0.5 | 0.5 | Tunnel up and PC online, every peer, present and future |
+| B. Python scheduled-task agent on the PC | 12 to 20 | 1.5 | 2 to 4 | Tunnel, MSSQL service, MSSQL query by integrated auth, config self-update |
+| C. Rust Windows-service agent on the PC | 25 to 40 | 1.5 | 2 to 3 | As B, plus reboot-aware pings and Event Log presence |
+| E. A Linux node on the office LAN as a devkit spoke | 12 to 20 | 4 to 6 | 4 to 8 | The tunnel heartbeat as designed, MSSQL port reachable over the LAN, no integrated auth |
+
+D combines with any other option at its own cost. Firewall automation from the hub's bundle,
+which only a PC-side agent can do, is 6 to 10 more build hours on B or C. A self-updating exe
+for C is 4 to 8 more.
+
+What drives each number:
+
+- **A** is a peer row, a hub release, and an import on the PC. The yearly hour is client updates
+  and a re-import when the hub section or the PC's row changes.
+- **D** is a probe loop in the hub app pinging each peer's tunnel address, unprivileged ICMP via
+  one more sysctl in the hub's compose file, one healthchecks.io check per peer, and a ruling
+  reversing hub design 3.5 ("the hub does not observe peers").
+- **B** is a new Windows-targeted repository with no Docker. The health part pings healthchecks.io
+  directly (aeth_ext demands the mail password at import, so its reuse is not worth the secret).
+  The updater polls the version endpoint, downloads the PC's conf asset on a new tag, and
+  re-imports the tunnel, so it must hold the PC's private key in a DPAPI-protected file of its
+  own. Testable end to end on the owner's Windows dev machine.
+- **C** costs twice B for the same coverage: Windows service plumbing, a Windows CI job to build
+  and attach the exe, and, for the devkit-container reuse to be real, extracting its fetch and
+  bundle code into a library first. SmartScreen friction on every update.
+- **E** spends its hours on routing. A container on a Docker bridge masquerades what it forwards,
+  so the PC would see the node's address, not the callers'. Keeping tunnel addresses means host
+  networking for that container and a static route on the PC, neither rendered by the compose
+  template. devkit projects assume Coolify, so deploys are by hand on the node or through Coolify's
+  remote-server support, which needs the tunnel to exist first. It is the only option that keeps
+  containers end to end and the only one that can later expose other office machines.
+
+## 4. The ruling (owner, 2026-09-15)
+
+A now. Then a simple scheduled-task script on the PC for config automation alone, expected this
+week to speed up testing: it re-imports the conf asset when the hub's tag changes and does
+nothing else. Then D, the hub probing every peer, as the cheap universal signal. Then B for what
+only the PC can see: MSSQL health with integrated auth and, later, hub-driven firewall rules. C
+and E stay as deliberate upgrades, not starting points: C if the PC's agent should become one
+exe with no runtime, E if the office should get a proper devkit node.
+
+Each later step gets its own ruling in the hub design before it is built.
+
+## 5. Installing A on the office PC
+
+Written for whoever sits at the PC with an administrator account. Every step is on the PC unless
+it says otherwise.
+
+1. **Confirm the subnet is free** (hub design 16, check 1). In a terminal, `ipconfig`: no adapter
+   may show an IPv4 address or subnet in `10.8.0.x`. On the VPS, `ip route` must not list
+   `10.8.0.0/24` before the hub's own `wg0` entry.
+2. **Install WireGuard for Windows.** Download the Windows installer from
+   `https://www.wireguard.com/install/` and run it as administrator. It installs the WireGuardNT
+   kernel driver and the WireGuard app.
+3. **Generate the key pair on the PC.** Open WireGuard, open the arrow next to "Add Tunnel" and
+   choose "Add empty tunnel...". The dialog shows a public key and an editor holding
+   `[Interface]` and a `PrivateKey` line. Name the tunnel `office-db-pc`. Copy the public key
+   shown and save the tunnel without activating it. The private key never leaves the PC.
+4. **Enrol.** Send the public key to whoever maintains `wireguard-hub`. They add a `[[peers]]` row
+   named `office-db-pc` at `10.8.0.10/32`, release the hub, and redeploy it in Coolify. Wait for
+   that redeploy before continuing.
+5. **Download the conf asset.** From
+   `https://github.com/AetherBreaker/wireguard-hub/releases/latest`, under Assets, download
+   `office-db-pc.conf`. Open it in Notepad. It holds `[Interface]` with a placeholder private
+   key and `Address = 10.8.0.10/32`, then `[Peer]` with the hub's public key,
+   `Endpoint = tunnels.sweetfiretobacco.com:51820`, `AllowedIPs = 10.8.0.0/24` and
+   `PersistentKeepalive = 25`.
+6. **Merge it into the tunnel.** In WireGuard, select `office-db-pc` and click Edit. Keep the
+   first two lines of the editor, `[Interface]` and the `PrivateKey` line, delete anything after
+   them, and paste everything from the downloaded file except its own `PrivateKey` placeholder
+   line. Save. The kill-switch checkbox does not appear, because `AllowedIPs` is not the whole
+   internet.
+7. **Activate.** Click Activate. Within about thirty seconds the tunnel shows "Latest handshake"
+   with a recent time and the transfer counters move. An activated tunnel is a Windows service
+   and starts at boot before anyone logs in.
+8. **Verify from both ends** (hub design 16, check 4). On the PC, `ping 10.8.0.1` answers: the
+   hub accepts traffic to its own tunnel address. On the VPS,
+   `docker exec wireguard-hub wg show wg0 latest-handshakes` lists the PC's public key with a
+   timestamp a few seconds old. Other peers are not reachable from the PC yet: forwarding between
+   peers is dropped until the next phase adds per-flow rules.
+9. **Stop the PC from sleeping.** Settings, System, Power, Screen and sleep: set Sleep to Never
+   when plugged in. A sleeping PC drops the tunnel and the database with it.
+10. **Confirm it survives a reboot.** Reboot the PC and, without logging in, repeat the VPS command
+    from step 8. A fresh handshake means the tunnel came up as a service.
+
+Afterwards: when a hub release changes the `[hub]` section of the peer table, or the PC's own
+row, repeat steps 5 and 6 with the new asset (the scheduled-task updater of section 4 will take
+this over). The WireGuard app shows a banner when a client update exists; install it as
+administrator. Nothing is opened in Windows Firewall for now; the MSSQL rule, scoped to the
+approved spoke addresses and to all profiles, is the next phase's.
