@@ -7,7 +7,7 @@
     "aeth-ext[sftp, async]>=8.0.8",
     "aiologic>=0.16.0",
     "apscheduler>=3.11.2",
-    "devkit-container>=2.0.1",
+    "devkit-container>=2.1.1",
     "gspread>=6.2.1",
     "pandas[performance]>=3.0.3",
     "paramiko>=5.0.0",
@@ -22,11 +22,11 @@
 
 [dependency-groups]
   dev = [
-    "aeth-devkit>=15.0.2",
+    "aeth-devkit>=15.1.1",
     "apscheduler-stubs>=0.1.0.dev2",
     "devkit-claude-hooks>=1.0.0",
     "devkit-poe-complete>=1.1.0",
-    "devkit-templates>=1.2.2",
+    "devkit-templates>=1.3.0",
     "pandas-stubs>=3.0.3.260530",
     "poethepoet>=0.46.0",
     "pyright>=1.1.411",

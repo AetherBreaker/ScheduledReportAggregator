@@ -12,15 +12,15 @@ supported-markers = [
 
 [[package]]
 name = "aeth-devkit"
-version = "15.0.2"
+version = "15.1.1"
 source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }
 dependencies = [
     { name = "poethepoet", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]
-sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/420/cd675bdfd54a3/aeth_devkit-15.0.2.tar.gz", hash = "sha256:420cd675bdfd54a3c43061f0e18fd5e9dca51d2fc9a414b4ae64099791cfb331" }
+sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/a25/c9c66f246f265/aeth_devkit-15.1.1.tar.gz", hash = "sha256:a25c9c66f246f26551e6c48350cdaf34c59722341b675c6b6b9f31dd5eef8604" }
 wheels = [
-    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/410/bf7bd8ab6507a/aeth_devkit-15.0.2-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:410bf7bd8ab6507a8ce4f52544de672a031e49c7d8a0ab18d2a1c869539d2301" },
-    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/e4a/8824d203cca01/aeth_devkit-15.0.2-py3-none-win_amd64.whl", hash = "sha256:e4a8824d203cca01ff51359e9327633eeb21b29816db8ecd9eb5f10bcf8f563c" },
+    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/293/9b927dcffd499/aeth_devkit-15.1.1-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:2939b927dcffd499104dc1f1d73b62b8e778af87fedd545c1ccc3b70b2f82e51" },
+    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/7dd/9d090160d45bb/aeth_devkit-15.1.1-py3-none-win_amd64.whl", hash = "sha256:7dd9d090160d45bb87470b3d7ebb7dff24e4c2f34faae5cb390436f6ceeb3d2f" },
 ]
 
 [[package]]
@@ -483,12 +483,12 @@ wheels = [
 
 [[package]]
 name = "devkit-container"
-version = "2.0.1"
+version = "2.1.1"
 source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }
-sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/72b/a85aae335e965/devkit_container-2.0.1.tar.gz", hash = "sha256:72ba85aae335e96566fa37867a4a4114c14de6712fe4343f705f3cea16317f0a" }
+sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/a01/83c81612b7ec1/devkit_container-2.1.1.tar.gz", hash = "sha256:a0183c81612b7ec150866197cc742cbcd91405a376225a284c982f19c1081367" }
 wheels = [
-    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/275/caa0c25c2ba88/devkit_container-2.0.1-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:275caa0c25c2ba88ea2d68189e55710250be443744996eb0f7c648dc92ffac59" },
-    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/d6f/1175137b0b69e/devkit_container-2.0.1-py3-none-win_amd64.whl", hash = "sha256:d6f1175137b0b69e5368b7263404398483f1a8044357d3e057c24bf62c9fb9fd" },
+    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/2e0/b5c277fc856ea/devkit_container-2.1.1-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:2e0b5c277fc856eab98fb15411846ad6cc86a21a1d09e82a012364d7f0345c2c" },
+    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/d17/0cf7c7c683dea/devkit_container-2.1.1-py3-none-win_amd64.whl", hash = "sha256:d170cf7c7c683dea7889e28c32fbfade6b4006835d10a12573f286bd26795b88" },
 ]
 
 [[package]]
@@ -503,14 +503,14 @@ wheels = [
 
 [[package]]
 name = "devkit-templates"
-version = "1.2.2"
+version = "1.3.0"
 source = { registry = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" }
 dependencies = [
     { name = "aeth-devkit", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]
-sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/dda/199a4f7db014b/devkit_templates-1.2.2.tar.gz", hash = "sha256:dda199a4f7db014b0c3f75e9792e9ff8f9a1094dae1721c8bf856693ac734b36" }
+sdist = { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/163/4018431421b88/devkit_templates-1.3.0.tar.gz", hash = "sha256:1634018431421b88562e7dd28766f34ff009b6333a141ff700b34f2a1bde1a6c" }
 wheels = [
-    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/837/75b29526fe39c/devkit_templates-1.2.2-py3-none-any.whl", hash = "sha256:83775b29526fe39c67f906acddc537127c804ad6ff7cbca781dde153c36efb77" },
+    { url = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+f/5d6/0c6c89ad7af7a/devkit_templates-1.3.0-py3-none-any.whl", hash = "sha256:5d60c6c89ad7af7ab35125f3c10b5a669bca09c52c252c44ecafdbbc81fcb870" },
 ]
 
 [[package]]
@@ -1315,7 +1315,7 @@ requires-dist = [
     { name = "aeth-ext", extras = ["sftp", "async"], specifier = ">=8.0.8", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
     { name = "aiologic", specifier = ">=0.16.0" },
     { name = "apscheduler", specifier = ">=3.11.2" },
-    { name = "devkit-container", specifier = ">=2.0.1", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
+    { name = "devkit-container", specifier = ">=2.1.1", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
     { name = "gspread", specifier = ">=6.2.1" },
     { name = "pandas", extras = ["performance"], specifier = ">=3.0.3" },
     { name = "paramiko", specifier = ">=5.0.0" },
@@ -1327,11 +1327,11 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "aeth-devkit", specifier = ">=15.0.2", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
+    { name = "aeth-devkit", specifier = ">=15.1.1", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
     { name = "apscheduler-stubs", specifier = ">=0.1.0.dev2" },
     { name = "devkit-claude-hooks", specifier = ">=1.0.0", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
     { name = "devkit-poe-complete", specifier = ">=1.1.0", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
-    { name = "devkit-templates", specifier = ">=1.2.2", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
+    { name = "devkit-templates", specifier = ">=1.3.0", index = "https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple" },
     { name = "pandas-stubs", specifier = ">=3.0.3.260530" },
     { name = "poethepoet", specifier = ">=0.46.0" },
     { name = "pyright", specifier = ">=1.1.411" },
