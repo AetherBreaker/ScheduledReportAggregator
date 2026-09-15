@@ -27,6 +27,9 @@ services:
       - WG_HANDSHAKE_TIMEOUT_SECS=${WG_HANDSHAKE_TIMEOUT_SECS:-}
       - WG_POLL_SECS=${WG_POLL_SECS:-}
       - WG_STALE_SECS=${WG_STALE_SECS:-}
+      - WG_HUB_URL=${WG_HUB_URL:?}
+      - WG_HUB_REPO=${WG_HUB_REPO:?}
+      - WG_HUB_TOKEN=${WG_HUB_TOKEN:-}
     networks:
       - coolify
     healthcheck:
