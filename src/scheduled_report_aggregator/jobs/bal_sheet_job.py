@@ -72,7 +72,7 @@ def assemble_ryo_filename_pattern(now: datetime | None = None) -> Pattern[str]:
     r"(?P<hour>\d{2})"
     r"(?P<minute>\d{2})"
     r"(?P<second>\d{2})"
-    r"(?P<microsecond>\d{6})"
+    r"(?P<microsecond>[1-9]{0,6}0*)"
     r")\.csv$"
   )
   return compile(pattern)
