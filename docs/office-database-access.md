@@ -243,6 +243,10 @@ owner's.
 Moved from the hub design's first-deploy checklist on 2026-10-14; the hub design's numbers are in
 brackets. Each is a hard stop if it fails.
 
+- [ ] (16.1, the warehouse half) The warehouse network does not use `10.8.0.0/24`. The PC's
+  installer checks this on its first run, before it changes anything, and stops if an adapter
+  already holds a `10.8.0.x` address (owner, 2026-10-14); how it checks is part of the installer's
+  design. The VPS half and `cffs-pc`'s network already hold (hub design 16).
 - [ ] (16.4) `office-db-pc` and the hub handshake with each other before any app is involved. On
   the PC, `ping 10.8.0.1` answers: the hub accepts traffic to its own tunnel address. On the VPS,
   `docker exec $(docker ps -qf name=wireguard-hub) wg show wg0 latest-handshakes` lists the PC's
