@@ -205,7 +205,11 @@ What followed:
   refused.
 - Shutdown consent is not adopted until `aeth_ext`'s helper exists (hub design 6.4; owner,
   2026-09-14).
-- Deployed in Coolify on the migrated compose file: not recorded as of 2026-10-14.
+- Deployed in fetched mode at v3.1.2 since 2026-09-17: Coolify deploys `main`'s HEAD, whose compose
+  file pins that tag. A running deploy is a connected one: the compose file requires the hub
+  variables, fetched mode refuses to start the app without a first handshake unless
+  `WG_TOLERATE_DISCONNECTED=1` is set (hub design 5.2), and the healthcheck that Coolify reports
+  covers the tunnel's heartbeat file.
 
 ## 7. Open: the database itself
 
