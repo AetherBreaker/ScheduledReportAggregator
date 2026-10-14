@@ -17,7 +17,7 @@ this document does not decide is asked, not inferred.
 
 ```text
  ScheduledReportAggregator        wireguard-hub                 office-db-pc
- Coolify container, VPS           Coolify container, VPS        Windows 11, office LAN
+ Coolify container, VPS           Coolify container, VPS        Windows 11, warehouse network
 +------------------------+      +-----------------------+      +---------------------------+
 | wg0 10.8.0.20          | UDP  | wg0 10.8.0.1          | UDP  | WireGuard for Windows     |
 | devkit-container,      |----->| FORWARD DROP, plus    |<-----|  tunnel 10.8.0.10         |
@@ -27,8 +27,8 @@ this document does not decide is asked, not inferred.
                                                                +---------------------------+
 ```
 
-- Both spokes dial the hub's public name, `tunnels.sweetfiretobacco.com:51820`. The office needs
-  outbound UDP only: no router port forward, no static address. ScheduledReportAggregator reaches
+- Both spokes dial the hub's public name, `tunnels.sweetfiretobacco.com:51820`. The warehouse
+  network needs outbound UDP only: no router port forward, no static address. ScheduledReportAggregator reaches
   the public name from inside the VPS through the Docker hairpin (hub design 16).
 - No DNS inside the tunnel: the database is addressed as `10.8.0.10`.
 - The tunnel address lands on the Windows host itself, so MSSQL and its firewall see each caller's
@@ -70,6 +70,8 @@ In order from the caller:
 
 - Windows 11. MSSQL runs natively as a Windows service. Its edition and instance shape are not
   yet known.
+- It sits on the warehouse network (owner, 2026-10-14), not the network of the owner's dev
+  machine, so nothing about its LAN can be read from there.
 - Headless and unattended, reached over RustDesk. RustDesk runs as a service, so a session works
   at the login screen and survives a reboot.
 - Tailscale is installed, and MSSQL is reachable today over the LAN and over Tailscale. Tailscale
@@ -106,8 +108,8 @@ Written 2026-09-15, corrected 2026-10-14.
   and a signing certificate costs yearly. A Python tool through uv avoids that but puts uv on the
   PC. SFTPyPI's index serves `wireguard-spoke-agent` without credentials (checked 2026-10-14), so
   installing it leaves no index credential on the PC.
-- **The office side of the path is untested until the first handshake (8):** outbound UDP from
-  the LAN, the router's NAT timeout against the 25 s keepalive, and the PC's sleep settings.
+- **The warehouse side of the path is untested until the first handshake (8):** outbound UDP
+  from the warehouse network, the router's NAT timeout against the 25 s keepalive, and the PC's sleep settings.
 - **The private key at rest.** Imported through the WireGuard app, the key is stored
   DPAPI-encrypted, readable by administrators. Through `wireguard-spoke-agent` (5.3), the key and
   the filled conf are plain files in `C:\ProgramData\wireguard-spoke-agent\`, whose ACL admits
