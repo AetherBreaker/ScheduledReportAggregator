@@ -253,6 +253,8 @@ brackets. Each is a hard stop if it fails.
   bundle, handshakes with the hub at the public name (the hairpin), and both of its heartbeat files
   are fresh; `docker inspect` shows `NET_ADMIN` in `cap_add`. The check's original first step, a
   start refused as `not enrolled`, does not apply: the key was enrolled before the first start.
+  The VPS command of (16.4) lists every peer, so its row for this project's public key
+  (`X3KOCW…`) settles the handshake part at the same time: under 180 s old means connected.
 
 The next phase's, once section 7 is decided:
 
