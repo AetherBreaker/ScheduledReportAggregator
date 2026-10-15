@@ -18,7 +18,6 @@ from scheduled_report_aggregator.custom_types import DayOfWeek
 from scheduled_report_aggregator.environment_init_vars import SETTINGS
 from scheduled_report_aggregator.jobs import HOLDING_FOLDER, BalanceSheetJob, TimeclockJob
 from scheduled_report_aggregator.jobs.base import CronArgs
-from scheduled_report_aggregator.jobs.employee_disc_job import EmployeeDiscountsJob
 from scheduled_report_aggregator.jobs.timeclock_job.flip_sheet_job import FlipSheetJob
 from scheduled_report_aggregator.scheduler_config import Scheduler
 
