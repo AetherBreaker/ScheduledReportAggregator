@@ -225,6 +225,13 @@ engine is MSSQL (owner, 2026-10-14). Everything else here is undecided, and each
 owner's. MSSQL itself is managed by someone else (4.1), so items 1, 2 and 6 are arranged with
 whoever manages it, not changed from this side.
 
+Status, 2026-10-15, the first test: MSSQL listens on TCP 1433. A SQL Server login exists; the
+probe's copy is `sql_login.json` (`UID`, `PWD`, `port`) on the VPS in tunnel-probe's persisted data
+folder, never in a repository. tunnel-probe 1.1.0 queries `FasTraxWarehouse.dbo.iteminformation`
+into a CSV through `pyodbc` and Microsoft ODBC Driver 18. wireguard-hub 1.5.2 forwards
+`10.8.0.21` to `10.8.0.10` on TCP 1433. The PC's firewall rule for `10.8.0.21` is added by hand.
+ScheduledReportAggregator's own flow, login and driver wait for the probe's result.
+
 1. **Port and instance.** The flow lines, the firewall rule and the connection string want one
    static TCP port, so TCP/IP must be enabled on the instance with a fixed port. The instance and
    the port are unknown.
