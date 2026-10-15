@@ -284,8 +284,9 @@ attempt are removed and never read as inputs; their key pairs are retired, never
 
 ## 10. The PC's installer
 
-Designed with the owner on 2026-10-14 and 2026-10-15. Status: designed, not built. The script is
-`Install-OfficeDbPc.ps1` at this repository's root. This section is its design and its manual.
+Designed with the owner on 2026-10-14 and 2026-10-15. Status: built, not yet run on the PC. The
+script is `Install-OfficeDbPc.ps1` at this repository's root. This section is its design and its
+manual.
 
 ### 10.1 Decisions
 

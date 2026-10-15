@@ -44,7 +44,7 @@
 - Consumes: wireguard-spoke-agent's `wireguard-spoke-agent install` subcommand (registers its task and runs once; exits non-zero on failure), its `settings.env` keys `WG_PEER_NAME`, `PERSISTED_DIR_LOC`, `PINGKEY`, `HEARTBEAT_SLUG`, `ALERTS_PUSHOVER_TOKEN`, `ALERTS_PUSHOVER_USER_KEY`, and the placeholders `ALERTS_EMAIL_PWD=unused`, `ALERTS_RECIPIENTS=[]`.
 - Produces: the raw URL `https://raw.githubusercontent.com/AetherBreaker/ScheduledReportAggregator/main/Install-OfficeDbPc.ps1`, used by Task 2. Each step of the script opens with a marker line `# ---- <n>. <name> ----`; the throwaway check in Step 4 finds steps 4 and 5 by those markers.
 
-- [ ] **Step 1: Write `Install-OfficeDbPc.ps1`**
+- [x] **Step 1: Write `Install-OfficeDbPc.ps1`**
 
 Write exactly this, LF line endings, ASCII only:
 
@@ -197,7 +197,7 @@ param(
 }
 ```
 
-- [ ] **Step 2: Parse it with PowerShell's own parser**
+- [x] **Step 2: Parse it with PowerShell's own parser**
 
 Parsing only; nothing is executed. Run in Windows PowerShell from the repository root:
 
@@ -209,7 +209,7 @@ if ($errors) { $errors | ForEach-Object { "$($_.Extent.StartLineNumber): $($_.Me
 
 Expected: `no parse errors`.
 
-- [ ] **Step 3: Check the encoding and line endings**
+- [x] **Step 3: Check the encoding and line endings**
 
 Run in Git Bash from the repository root:
 
@@ -219,7 +219,7 @@ grep -cP '[^\x00-\x7F]' Install-OfficeDbPc.ps1; grep -c $'\r' Install-OfficeDbPc
 
 Expected: `0` and `0` (ASCII only, LF only).
 
-- [ ] **Step 4: Run steps 4 and 5 of the script against a scratch folder**
+- [x] **Step 4: Run steps 4 and 5 of the script against a scratch folder**
 
 Write this throwaway file to the session scratchpad as `check_installer_blocks.ps1`. It cuts steps 4 and 5 out of the real script by their markers and runs them with `$AgentHome` pointing into the scratch folder, so it tests the shipped text and touches nothing outside the scratch folder. It never runs case "no parameter, no installed key", which would open a file picker.
 
@@ -292,7 +292,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <scratchpad>\check_installer
 
 Expected: every line starts `ok`, the last line is `0 wrong`. The `Write-Host` lines of the steps print between them. A `BAD` line is a defect in the script: fix the script, then re-run Steps 2 to 4.
 
-- [ ] **Step 5: Compare with `Install-CffsPc.ps1`**
+- [x] **Step 5: Compare with `Install-CffsPc.ps1`**
 
 Run in Git Bash from the repository root:
 
@@ -315,7 +315,7 @@ Then confirm by reading the new file, each item a Review Focus line or a Global 
 - `Assert-Exit` follows `icacls`, `uv tool install` and the agent's `install`; the agent's `install` is the last native command, so a hub that is unreachable, or a PC not enrolled, stops the run there with `wireguard-spoke-agent install failed with exit code 1`, the agent's own error printed above it, and nothing after it needs undoing (Review Focus 5).
 - No `powercfg`, `New-NetFirewallRule`, `Set-NetFirewall*`, `sqlcmd`, or `Read-Host` other than the key path's (Global Constraints).
 
-- [ ] **Step 6: Update the docs that follow the build**
+- [x] **Step 6: Update the docs that follow the build**
 
 In `docs/office-database-access.md`, section 10's first paragraph, replace:
 
