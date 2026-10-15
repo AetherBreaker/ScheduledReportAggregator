@@ -544,7 +544,7 @@ class TimeclockJob(JobBase):
         # map week_df "Hours Worked" to Decimal, treating non-convertible values as 0
         week_df["Hours Worked"] = week_df["Hours Worked"].map(lambda x: Decimal(x) if notna(x) else Decimal(0))
 
-        week_worked_hours = week_df["Hours Worked"].sum()
+        week_worked_hours = Decimal(week_df["Hours Worked"].sum())
 
         overunder_data.add(
           OverUnderEntry(
