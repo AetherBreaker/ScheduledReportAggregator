@@ -188,7 +188,7 @@ What followed:
   installs it its own way, and the office PC's installer was left for later (owner, 2026-10-05).
   It has run on `cffs-pc` since 2026-10-06, installed by camera-footage-fs's `Install-CffsPc.ps1`.
 - **Windows spokes are settled on the agent** (owner, 2026-10-14). The office PC's installer,
-  which puts the agent on it, is the next piece of work and gets its own design.
+  which puts the agent on it, is designed in section 10.
 - **D, B, C and E stand as the upgrade path**, each with its own ruling before it is built. D
   changes the hub, so its ruling is recorded in the hub design; B, C and E concern this PC, so
   theirs are recorded here.
@@ -281,3 +281,149 @@ attempt are removed and never read as inputs; their key pairs are retired, never
 - [x] `SERVER_PUBLIC_KEY`, `SERVER_ENDPOINT` and `TAXES_JOB_PRIVATE_KEY` are gone from `.env`
   (checked 2026-10-14).
 - [ ] `docker/wireguard/keys.env`, gitignored, is still present.
+
+## 10. The PC's installer
+
+Designed with the owner on 2026-10-14 and 2026-10-15. Status: designed, not built. The script is
+`Install-OfficeDbPc.ps1` at this repository's root. This section is its design and its manual.
+
+### 10.1 Decisions
+
+All the owner's.
+
+- **Scope: the tunnel only.** MSSQL is managed by someone else (4.1). The installer never touches
+  MSSQL, its configuration, or the database's firewall rule (7.6).
+- **Location: this repository's root**, beside this document, following camera-footage-fs's
+  precedent: the installer lives in the project that needs the spoke. Rejected: a repository of
+  its own for the PC (a repository for one script, and the installer apart from this document);
+  one shared Windows-spoke installer in `wireguard-spoke-agent` (it reopens the 2026-10-05 rulings
+  that the agent ships no installer and that cffs's installer is one file, with no thin entry
+  script).
+- **Shape: one self-contained PowerShell file, run from `main`'s raw URL.** No version prompt: it
+  fetches nothing from this repository, and the agent and WireGuard install at their latest
+  releases.
+- **Built from `Install-CffsPc.ps1`'s WireGuard half**, the same steps adapted to this peer. About
+  a hundred lines are duplicated between the two scripts; accepted, and a fix to one is copied to
+  the other by hand.
+- **Peer name hard-coded:** `office-db-pc`.
+- **Monitoring off for now** (2026-10-15). The healthchecks.io and Pushover values are optional
+  parameters, never prompted; a re-run with them turns monitoring on later.
+- **No power settings** (2026-10-15). Unlike cffs's installer it does not run `powercfg`. The PC's
+  sleep settings stay a consideration for whoever sets the PC up (4.2).
+- **No subnet check** (2026-10-15). The warehouse network was checked once by hand instead (8,
+  16.1).
+- **The PC is ours to change** (2026-10-15); only MSSQL is the other party's.
+
+### 10.2 Running it
+
+On the PC, over RustDesk, as an administrator:
+
+1. Copy `office-db-pc.key` from the maintainer's copy (4.1) to the PC with RustDesk's file
+   transfer, for example to the desktop.
+2. Open Windows PowerShell as administrator and run:
+
+   ```powershell
+   irm https://raw.githubusercontent.com/AetherBreaker/ScheduledReportAggregator/main/Install-OfficeDbPc.ps1 | iex
+   ```
+
+   On the first run a file picker asks for `office-db-pc.key`. It needs Windows PowerShell 5.1 in
+   a desktop session; where it cannot open (PowerShell 7, for one), the script asks for a typed
+   path instead. To pass parameters, use the script-block form:
+
+   ```powershell
+   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/AetherBreaker/ScheduledReportAggregator/main/Install-OfficeDbPc.ps1))) -PrivateKeyFile C:\path\office-db-pc.key
+   ```
+
+3. Read the console. The agent's first run logs `handshake fresh` or `handshake stale`. Then run
+   check (16.4), the reboot check and (16.5) of section 8.
+
+GitHub caches raw URLs for about five minutes, so right after a push the one-liner can still serve
+the previous copy.
+
+Parameters, all optional and never prompted:
+
+| Parameter | Effect |
+| --- | --- |
+| `-PrivateKeyFile <path>` | Installs this key, replacing any installed one; the source file is deleted. |
+| `-PingKey <key>` | Sets `PINGKEY`: the agent's healthchecks.io pings start. |
+| `-HeartbeatSlug <slug>` | Sets `HEARTBEAT_SLUG`; unset, the agent uses `wireguard-spoke-office-db-pc`. |
+| `-PushoverToken <token>`, `-PushoverUserKey <key>` | Set `ALERTS_PUSHOVER_TOKEN` and `ALERTS_PUSHOVER_USER_KEY`: Pushover for an exception the agent did not catch. |
+
+### 10.3 What it does
+
+The body runs inside a script block, so under `iex` nothing but the parameters lands in the
+caller's session, and it stops with `throw`, never `exit`, so the window stays open. It first
+refuses to run unless the session is an administrator one, since `#Requires` is ignored under
+`iex`. It sets `$ErrorActionPreference = 'Stop'` and enables TLS 1.2 for its downloads. Every native
+command whose failure matters (`icacls`, `uv tool install`, the agent's `install`) has its exit
+code checked, because Windows PowerShell does not stop on a failed native command.
+
+In order:
+
+1. **The locked folder.** Create `C:\ProgramData\wireguard-spoke-agent\logs`. Set the folder's
+   ACL to SYSTEM and Administrators with full control, inherited by everything inside, and remove
+   inheritance from above:
+   `icacls <folder> /inheritance:r /grant:r *S-1-5-18:(OI)(CI)F *S-1-5-32-544:(OI)(CI)F`.
+2. **WireGuard for Windows**, only when `C:\Program Files\WireGuard\wireguard.exe` is missing.
+   Download `https://download.wireguard.com/windows-client/wireguard-installer.exe` to the temp
+   folder; refuse it unless its Authenticode signature is valid and the signer's subject names
+   WireGuard LLC; run it and wait; then confirm `wireguard.exe` exists.
+3. **uv and the agent.** Point `UV_INSTALL_DIR`, `UV_PYTHON_INSTALL_DIR`, `UV_TOOL_DIR`,
+   `UV_TOOL_BIN_DIR` and `UV_CACHE_DIR` at the locked folder's `uv`, `python`, `tools`, `bin` and
+   `cache`, and set `UV_NO_MODIFY_PATH=1` and `UV_MANAGED_PYTHON=1`, matching the agent's
+   `run.cmd`. Install uv with astral's `https://astral.sh/uv/install.ps1` when `uv\uv.exe` is
+   missing. Then
+   `uv tool install --upgrade --index https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple wireguard-spoke-agent`.
+4. **The private key.** With `-PrivateKeyFile`: copy the file to `office-db-pc.key` in the locked
+   folder, then delete the source. It is copied, not moved, because a moved file keeps its old
+   ACL instead of taking the folder's. Without the parameter and with no installed key: a file
+   picker, owned by a topmost window so it does not open behind the console, falling back to a
+   typed path when it cannot open; no path at all stops the run. Without the parameter and with
+   an installed key: nothing.
+5. **`settings.env`.** Read the existing file, if any, keeping its values. Set
+   `WG_PEER_NAME=office-db-pc`, `PERSISTED_DIR_LOC=<the locked folder>`, `ALERTS_EMAIL_PWD=unused`
+   and `ALERTS_RECIPIENTS=[]`. The last two are the agent's placeholders until aeth-ext treats a
+   missing mail password as "email off"; the empty recipient list keeps aeth-ext from ever logging
+   in to the real mailbox. Set each monitoring value passed (10.2). Write `KEY=value` lines with
+   CRLF endings, UTF-8 without a BOM.
+6. **`wireguard-spoke-agent install`.** The agent fetches the hub's `office-db-pc.conf`, fills in
+   the key, installs the tunnel service and reports the handshake, then renders `run.cmd` and
+   registers its scheduled task, logging to the console as it goes.
+7. **Closing lines:** the path of the agent's log, `C:\ProgramData\wireguard-spoke-agent\logs\agent.log`,
+   and the VPS command of check (16.4),
+   `docker exec $(docker ps -qf name=wireguard-hub) wg show wg0 latest-handshakes`.
+
+### 10.4 Re-runs and failures
+
+Every step is safe to repeat.
+
+| Step | On a re-run |
+| --- | --- |
+| The locked folder | Created if missing; the ACL is set again. |
+| WireGuard for Windows | Skipped while installed; WireGuard for Windows announces its own updates. |
+| uv and the agent | uv installed only if missing; the agent reinstalled at its latest release. |
+| The private key | Kept when installed and no `-PrivateKeyFile` is given; replaced by a given one. |
+| `settings.env` | Existing values kept, the fixed lines set again, passed monitoring values override. |
+| `wireguard-spoke-agent install` | The task registered again only if it changed; one maintenance run. |
+
+A failing step stops the run with a message naming the step. Nothing is rolled back: since every
+step is safe to repeat, the recovery is to fix the cause and run the same command again. A
+WireGuard installer that fails the signature check is refused before it runs. A stale handshake on
+the first run does not fail the installer: the agent retries every five minutes, and the closing
+lines give the VPS command to confirm from the hub's side.
+
+### 10.5 Verification
+
+- **Before commit:** PowerShell's own parser reports no errors in the file
+  (`[System.Management.Automation.Language.Parser]::ParseFile`), and every step is compared with
+  its counterpart in `Install-CffsPc.ps1`. The script is never run anywhere but the PC: on another
+  machine it would put `office-db-pc`'s key on a second tunnel, and the hub would flip between the
+  two.
+- **Acceptance:** the owner's run on the PC. Checks (16.4), the reboot check and (16.5) of
+  section 8 are ticked from the results the owner pastes back.
+- **Delivery:** a push to `main`. No release is needed, and no redeploy follows, since the script
+  is not under `docker/**`.
+
+When it is built, this section's status line changes, and the hub design's 10.2 names
+`Install-OfficeDbPc.ps1` for `office-db-pc`. After the owner's run, the hub design's 10.4 and this
+document's 4.1 stop saying the PC is not set up.
