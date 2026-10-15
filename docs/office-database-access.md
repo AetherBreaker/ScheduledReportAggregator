@@ -72,7 +72,8 @@ In order from the caller:
   yet known. MSSQL is managed by someone else, not by this project's owner (owner, 2026-10-15):
   its configuration is not ours to change, and the PC's installer covers the tunnel only.
 - It sits on the warehouse network (owner, 2026-10-14), not the network of the owner's dev
-  machine, so nothing about its LAN can be read from there.
+  machine, so nothing about its LAN can be read from there. Its computer name is
+  `DESKTOP-S28I8PP`; its one LAN address is `192.168.11.64/24` on Ethernet (checked 2026-10-15).
 - Headless and unattended, reached over RustDesk. RustDesk runs as a service, so a session works
   at the login screen and survives a reboot.
 - Tailscale is installed, and MSSQL is reachable today over the LAN and over Tailscale. Tailscale
@@ -246,10 +247,10 @@ whoever manages it, not changed from this side.
 Moved from the hub design's first-deploy checklist on 2026-10-14; the hub design's numbers are in
 brackets. Each is a hard stop if it fails.
 
-- [ ] (16.1, the warehouse half) The warehouse network does not use `10.8.0.0/24`. The PC's
-  installer checks this on its first run, before it changes anything, and stops if an adapter
-  already holds a `10.8.0.x` address (owner, 2026-10-14); how it checks is part of the installer's
-  design. The VPS half and `cffs-pc`'s network already hold (hub design 16).
+- [x] (16.1, the warehouse half) The warehouse network does not use `10.8.0.0/24`. Checked once by
+  hand on the PC on 2026-10-15, by the owner's choice instead of an installer step: no address
+  and no route on it overlaps `10.8.0.0/24`; its LAN is `192.168.11.0/24` (4.1). The VPS half and
+  `cffs-pc`'s network hold too (hub design 16).
 - [ ] (16.4) `office-db-pc` and the hub handshake with each other before any app is involved. On
   the PC, `ping 10.8.0.1` answers: the hub accepts traffic to its own tunnel address. On the VPS,
   `docker exec $(docker ps -qf name=wireguard-hub) wg show wg0 latest-handshakes` lists the PC's
