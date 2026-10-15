@@ -63,6 +63,11 @@ class Settings(BaseSettings):
     return self._creds_file_reusable("RYO FTP creds file not found at expected location", "secrets", "ryo_ftp_creds.json")
 
   @property
+  def sql_login_file(self) -> Path:
+    """Path to the warehouse SQL Server login JSON (`UID`, `PWD`, `port`), erroring if the file is missing."""
+    return self._creds_file_reusable("Warehouse SQL login file not found at expected location", "secrets", "sql_login.json")
+
+  @property
   def google_api_key_file(self) -> Path:
     """Path to the Google service-account key JSON, erroring if the file is missing."""
     return self._creds_file_reusable(
