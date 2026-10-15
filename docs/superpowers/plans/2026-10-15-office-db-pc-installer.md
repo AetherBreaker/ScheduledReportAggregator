@@ -345,7 +345,7 @@ with:
   run on the PC yet.
 ```
 
-- [ ] **Step 7: Commit and push both repositories**
+- [x] **Step 7: Commit and push both repositories**
 
 ```bash
 git add Install-OfficeDbPc.ps1 docs/office-database-access.md docs/superpowers/plans/2026-10-15-office-db-pc-installer.md
@@ -359,7 +359,7 @@ git push
 
 Expected: both pushes succeed; `git status` in each repository shows it up to date with `origin/main`.
 
-- [ ] **Step 8: Confirm the raw URL serves the new file**
+- [x] **Step 8: Confirm the raw URL serves the new file**
 
 GitHub caches raw URLs for about five minutes. Run until it prints the script's first lines, at most every minute:
 

@@ -372,12 +372,17 @@ In order:
 3. **uv and the agent.** Point `UV_INSTALL_DIR`, `UV_PYTHON_INSTALL_DIR`, `UV_TOOL_DIR`,
    `UV_TOOL_BIN_DIR` and `UV_CACHE_DIR` at the locked folder's `uv`, `python`, `tools`, `bin` and
    `cache`, and set `UV_NO_MODIFY_PATH=1` and `UV_MANAGED_PYTHON=1`, matching the agent's
-   `run.cmd`. Install uv with astral's `https://astral.sh/uv/install.ps1` when `uv\uv.exe` is
-   missing. Then
+   `run.cmd`. When `uv\uv.exe` is missing, install uv with astral's
+   `https://astral.sh/uv/install.ps1`, in a child Windows PowerShell with
+   `-ExecutionPolicy Bypass`, as astral documents: the installer refuses Windows' default
+   Restricted policy, and its `exit` would close the window if it ran inside this script's `iex`
+   (found in the review of 2026-10-15). The child inherits the `UV_*` variables. Then
    `uv tool install --upgrade --index https://pypi.sweetfiretobacco.com/jacob.ogden/internal/+simple wireguard-spoke-agent`.
 4. **The private key.** With `-PrivateKeyFile`: copy the file to `office-db-pc.key` in the locked
    folder, then delete the source. It is copied, not moved, because a moved file keeps its old
-   ACL instead of taking the folder's. Without the parameter and with no installed key: a file
+   ACL instead of taking the folder's. Then delete the agent's `state.json`: the agent refills
+   its conf only on a new hub tag, so forgetting the applied one makes its next run refill the
+   conf with this key and reinstall the tunnel. Without the parameter and with no installed key: a file
    picker, owned by a topmost window so it does not open behind the console, falling back to a
    typed path when it cannot open; no path at all stops the run. Without the parameter and with
    an installed key: nothing.
@@ -403,7 +408,7 @@ Every step is safe to repeat.
 | The locked folder | Created if missing; the ACL is set again. |
 | WireGuard for Windows | Skipped while installed; WireGuard for Windows announces its own updates. |
 | uv and the agent | uv installed only if missing; the agent reinstalled at its latest release. |
-| The private key | Kept when installed and no `-PrivateKeyFile` is given; replaced by a given one. |
+| The private key | Kept when installed and no `-PrivateKeyFile` is given; replaced by a given one, which the agent's run then puts into the tunnel. |
 | `settings.env` | Existing values kept, the fixed lines set again, passed monitoring values override. |
 | `wireguard-spoke-agent install` | The task registered again only if it changed; one maintenance run. |
 

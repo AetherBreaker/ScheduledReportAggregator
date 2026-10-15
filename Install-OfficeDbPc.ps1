@@ -77,7 +77,13 @@ param(
   $env:UV_CACHE_DIR = Join-Path $AgentHome 'cache'
   $env:UV_MANAGED_PYTHON = '1'
   $uv = Join-Path $env:UV_INSTALL_DIR 'uv.exe'
-  if (-not (Test-Path $uv)) { Invoke-RestMethod 'https://astral.sh/uv/install.ps1' | Invoke-Expression }
+  if (-not (Test-Path $uv)) {
+    # In a child process, as astral documents: its installer refuses a Restricted execution policy
+    # (Windows' default), and its `exit` would close this window if it ran here under iex. The
+    # child inherits the UV_* variables; Bypass lasts only for that process.
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'irm https://astral.sh/uv/install.ps1 | iex'
+    Assert-Exit 'the uv installer'
+  }
   & $uv tool install --upgrade --index $AgentIndex wireguard-spoke-agent
   Assert-Exit 'uv tool install wireguard-spoke-agent'
 
@@ -104,6 +110,9 @@ param(
     # Naming the installed key itself stops here, before the delete: Copy-Item refuses a file onto itself.
     Copy-Item $PrivateKeyFile $keyTarget -Force
     Remove-Item $PrivateKeyFile -Force
+    # The agent refills its conf only on a new hub tag; forgetting the applied one makes its next
+    # run refill the conf with this key and reinstall the tunnel.
+    Remove-Item (Join-Path $AgentHome 'state.json') -Force -ErrorAction SilentlyContinue
     Write-Host "Installed $keyTarget and deleted $PrivateKeyFile"
   }
 
