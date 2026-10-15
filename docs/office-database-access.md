@@ -82,11 +82,12 @@ In order from the caller:
   are untouched when it comes up.
 - Enrolled as `office-db-pc` at `10.8.0.10/32` in wireguard-hub 1.5.0 (2026-09-15), public key
   `ikf93PzvBWSGpfQvZrW+sa0B552/ee3LmZHA/B95Jx0=`. The maintainer generated its key pair at
-  enrolment. The private key `office-db-pc.key` and the completed `office-db-pc.conf` are
-  gitignored files, with identical copies in this repository's root and beside the
-  `wireguard-hub` checkout.
-- Not set up yet: nothing is installed on the PC and it has never handshaken with the hub
-  (owner, 2026-10-05).
+  enrolment. On the PC the key lives in the agent's locked folder. The maintainer's copy,
+  `office-db-pc.key` with the completed `office-db-pc.conf`, is a pair of gitignored files beside
+  the `wireguard-hub` checkout; the copy once kept in this repository's root was deleted by the
+  owner on 2026-10-15.
+- Installed with `Install-OfficeDbPc.ps1` on 2026-10-15 (section 10); its first handshake with
+  the hub came the same day, and the tunnel comes back on its own after a reboot (8).
 
 ### 4.2 Considerations for anything installed on it
 
@@ -110,8 +111,10 @@ Written 2026-09-15, corrected 2026-10-14.
   and a signing certificate costs yearly. A Python tool through uv avoids that but puts uv on the
   PC. SFTPyPI's index serves `wireguard-spoke-agent` without credentials (checked 2026-10-14), so
   installing it leaves no index credential on the PC.
-- **The warehouse side of the path is untested until the first handshake (8):** outbound UDP
-  from the warehouse network, the router's NAT timeout against the 25 s keepalive, and the PC's sleep settings.
+- **The warehouse side of the path:** outbound UDP from the warehouse network works (first
+  handshake 2026-10-15, 8). The router's NAT timeout against the 25 s keepalive and the PC's sleep
+  settings show only over time; the agent's handshake check, or monitoring once it is on, will
+  catch a lapse.
 - **The private key at rest.** Imported through the WireGuard app, the key is stored
   DPAPI-encrypted, readable by administrators. Through `wireguard-spoke-agent` (5.3), the key and
   the filled conf are plain files in `C:\ProgramData\wireguard-spoke-agent\`, whose ACL admits
@@ -251,20 +254,25 @@ brackets. Each is a hard stop if it fails.
   hand on the PC on 2026-10-15, by the owner's choice instead of an installer step: no address
   and no route on it overlaps `10.8.0.0/24`; its LAN is `192.168.11.0/24` (4.1). The VPS half and
   `cffs-pc`'s network hold too (hub design 16).
-- [ ] (16.4) `office-db-pc` and the hub handshake with each other before any app is involved. On
+- [x] (16.4) `office-db-pc` and the hub handshake with each other before any app is involved. On
   the PC, `ping 10.8.0.1` answers: the hub accepts traffic to its own tunnel address. On the VPS,
   `docker exec $(docker ps -qf name=wireguard-hub) wg show wg0 latest-handshakes` lists the PC's
   public key with a timestamp a few seconds old. Coolify suffixes container names, so
   `docker exec wireguard-hub` by name fails. Other peers are not reachable from the PC: forwarding
-  between peers is dropped unless a flow line allows it.
-- [ ] The tunnel survives a reboot of the PC: before anyone logs in, the VPS command above shows a
-  fresh handshake.
-- [ ] (16.5) ScheduledReportAggregator, deployed with the environment of section 6, fetches the
+  between peers is dropped unless a flow line allows it. Held 2026-10-15: `ping 10.8.0.1`
+  answered from the PC, and the hub listed the PC's key with a handshake its agent had just
+  judged fresh.
+- [x] The tunnel survives a reboot of the PC: before anyone logs in, the VPS command above shows a
+  fresh handshake. Held 2026-10-15: 59 s old by the VPS's own clock after a reboot with no login.
+- [x] (16.5) ScheduledReportAggregator, deployed with the environment of section 6, fetches the
   bundle, handshakes with the hub at the public name (the hairpin), and both of its heartbeat files
   are fresh; `docker inspect` shows `NET_ADMIN` in `cap_add`. The check's original first step, a
   start refused as `not enrolled`, does not apply: the key was enrolled before the first start.
   The VPS command of (16.4) lists every peer, so its row for this project's public key
   (`X3KOCW…`) settles the handshake part at the same time: under 180 s old means connected.
+  Held 2026-10-15: its handshake was 26 s old. The bundle fetch and `NET_ADMIN` follow from it,
+  since fetched mode has no configuration without the bundle and no `wg0` without `NET_ADMIN`.
+  The heartbeat files were not looked at; the container's health in Coolify shows them.
 
 The next phase's, once section 7 is decided:
 
@@ -284,7 +292,8 @@ attempt are removed and never read as inputs; their key pairs are retired, never
 
 ## 10. The PC's installer
 
-Designed with the owner on 2026-10-14 and 2026-10-15. Status: built, not yet run on the PC. The
+Designed with the owner on 2026-10-14 and 2026-10-15. Status: built, and run on the PC on
+2026-10-15; accepted (8). The
 script is `Install-OfficeDbPc.ps1` at this repository's root. This section is its design and its
 manual.
 
