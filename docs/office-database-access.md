@@ -69,7 +69,8 @@ In order from the caller:
 ### 4.1 Facts
 
 - Windows 11. MSSQL runs natively as a Windows service. Its edition and instance shape are not
-  yet known.
+  yet known. MSSQL is managed by someone else, not by this project's owner (owner, 2026-10-15):
+  its configuration is not ours to change, and the PC's installer covers the tunnel only.
 - It sits on the warehouse network (owner, 2026-10-14), not the network of the owner's dev
   machine, so nothing about its LAN can be read from there.
 - Headless and unattended, reached over RustDesk. RustDesk runs as a service, so a session works
@@ -217,7 +218,8 @@ What followed:
 
 Deferred by the owner on 2026-09-14 until the tunnel was implemented, as not blocking it. The
 engine is MSSQL (owner, 2026-10-14). Everything else here is undecided, and each item is the
-owner's.
+owner's. MSSQL itself is managed by someone else (4.1), so items 1, 2 and 6 are arranged with
+whoever manages it, not changed from this side.
 
 1. **Port and instance.** The flow lines, the firewall rule and the connection string want one
    static TCP port, so TCP/IP must be enabled on the instance with a fixed port. The instance and
@@ -232,8 +234,9 @@ owner's.
    its existing camera-footage-fs line:
    `-A FORWARD -i wg0 -o wg0 -s 10.8.0.20/32 -d 10.8.0.10/32 -p tcp --dport <port> -m conntrack --ctstate NEW -j ACCEPT`.
 6. **The PC's firewall rule.** Inbound TCP on the port from the approved tunnel addresses, all
-   profiles; the Tailscale allowance removed once the tunnel replaces it. Whether the PC's
-   installer writes this rule is for the installer's design.
+   profiles; the Tailscale allowance removed once the tunnel replaces it. The PC's installer
+   does not write it: the installer covers the tunnel only (owner, 2026-10-15). Who writes it
+   is open.
 7. **Order.** `tunnel-probe` first: it is the sandbox for the Python connect-and-query workflow
    over the tunnel, outside production (owner, 2026-09-14). This project's jobs query the database
    only after it has passed.
