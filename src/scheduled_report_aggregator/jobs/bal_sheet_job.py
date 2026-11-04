@@ -19,14 +19,17 @@ from pandas import concat, isna, read_csv, to_numeric
 from aeth_ext.types import EmailMessageParts
 from aeth_ext.utils import batch_send_emails, prepare_email_message, today
 from scheduled_report_aggregator.environment_init_vars import SETTINGS
-from scheduled_report_aggregator.jobs.base import CanRescheduleJobError, FTPHandlerKey, JobBase
+from scheduled_report_aggregator.jobs.base import CanRescheduleJobError, FTPHandlerKey, JobBase, JobError
 
 if TYPE_CHECKING:
   # Standard library imports
-  from collections.abc import Callable
+  from collections.abc import Callable, Mapping
   from pathlib import Path
   from re import Pattern
   from typing import ClassVar, Literal
+
+  # Third party imports
+  from pandas import Series
 
 logger = getLogger(__name__)
 
@@ -178,6 +181,25 @@ def assemble_sas_filename_pattern(now: datetime | None = None) -> Pattern[str]:
   return compile(pattern)
 
 
+SAS_STORE_NAME_OVERRIDES: dict[str, int] = {
+  # The warehouse itself, drafted by SAS as a customer; RYO's equivalent is "SFT-WHOLESALE" -> 999.
+  "SWEET FIRE TOB WHSE": 999,
+}
+
+
+def extract_storenums(names: Series, overrides: Mapping[str, int] | None = None) -> Series:
+  """Pull the store number out of each store name, as a nullable Int64.
+
+  A name in *overrides* gets its mapped number; a name with no digits in it gets <NA> rather than
+  failing the whole report, so the caller can keep that row under its original name.
+  """
+  storenums = to_numeric(names.str.extract(r"^.*?(\d+).*?$", expand=False), errors="coerce").astype("Int64")
+  if overrides:
+    mapped = names.map(overrides).astype("Int64")
+    storenums = mapped.fillna(storenums)
+  return storenums
+
+
 class DownloadedFiles(TypedDict):
   ryo: Path
   sas: Path
@@ -220,10 +242,13 @@ class BalanceSheetJob(JobBase):
     try:
       report_path = self.assemble_report(downloaded_files)
     except Exception as e:
+      # Assembly only reads the files just downloaded, so a retry would fail the same way on the
+      # same files: alert and stop now rather than retrying up to the error threshold.
       logger.exception("%s: Error assembling report:", self.__class__.__name__, exc_info=e)
-      raise CanRescheduleJobError(
-        "error in report assembly",
-        count_error=True,
+      raise JobError(
+        f"Could not assemble the balance sheet from {downloaded_files['ryo'].name} and {downloaded_files['sas'].name}: "
+        f"{type(e).__name__}: {e}",
+        reason="error in report assembly",
       ) from e
 
     try:
@@ -317,8 +342,9 @@ class BalanceSheetJob(JobBase):
     ryo_df = ryo_df.apply(lambda col: col.str.strip())
 
     ryo_df.loc[:, "store"] = ryo_df["store"].str.replace(r"SFT-WHOLESALE", "SFT-WHOLESALE 999")
-    ryo_cleaned_storenums = ryo_df["store"].str.extract(r"^.*?(\d+).*?$", expand=False)
-    ryo_df["storenum"] = to_numeric(ryo_cleaned_storenums, errors="coerce").astype(int)
+    ryo_df["storenum"] = extract_storenums(ryo_df["store"])
+    # Only rows with no store number keep a name, so they merge and print under it instead.
+    ryo_df["store_name"] = ryo_df["store"].where(ryo_df["storenum"].isna())
 
     # ryo_cleaned_amounts = ryo_df["ryo"].str.replace(r"[$,]", "", regex=True).str.replace("^-$", "0", regex=True)
     # ryo_df["ryo"] = to_numeric(ryo_cleaned_amounts, errors="coerce").astype(float)
@@ -350,18 +376,27 @@ class BalanceSheetJob(JobBase):
       dtype=str,
     )
 
-    sas_df.loc[:, "storenum"] = sas_df["store"].str.extract(r"^.*?(\d+).*?$").astype(int)
+    sas_df.loc[:, "store"] = sas_df["store"].str.strip()
+    sas_df["storenum"] = extract_storenums(sas_df["store"], SAS_STORE_NAME_OVERRIDES)
+    sas_df["store_name"] = sas_df["store"].where(sas_df["storenum"].isna())
 
     sas_df["sas_total"] = sas_df["amount"].map(Decimal)
     # sas_df.to_csv("test_sas.csv", header=True, index=False)
 
-    # group by store and aggregate the amount column
-    sas_grouped = sas_df.groupby("storenum").agg({"sas_total": "sum"}).reset_index()
+    # group by store and aggregate the amount column; dropna=False keeps the unmatched-name groups
+    sas_grouped = sas_df.groupby(["storenum", "store_name"], dropna=False).agg({"sas_total": "sum"}).reset_index()
 
     # sas_grouped.to_csv("test_sas_agged.csv", header=True, index=False)
 
-    # join sas_total to ryo_df on storenum
-    merged_df = ryo_df.merge(sas_grouped, on="storenum", how="outer")
+    # join sas_total to ryo_df on storenum, or on the original name for rows without one
+    merged_df = ryo_df.merge(sas_grouped, on=["storenum", "store_name"], how="outer")
+    merged_df = merged_df.sort_values("storenum", na_position="last", kind="stable")
+
+    unmatched = merged_df.loc[merged_df["storenum"].isna(), "store_name"].tolist()
+    if unmatched:
+      logger.warning("%s: No store number found for %s; kept under their original names", self.__class__.__name__, unmatched)
+
+    merged_df["storenum"] = merged_df["storenum"].astype("string").fillna(merged_df["store_name"])
     # merged_df.to_csv("test_merged.csv", header=True, index=True)
     merged_df = merged_df[
       [
@@ -423,10 +458,7 @@ class BalanceSheetJob(JobBase):
       report_path = self.assemble_report(downloaded_files)  # noqa: F841
     except Exception as e:
       logger.exception("%s: Error assembling report:", self.__class__.__name__, exc_info=e)
-      raise CanRescheduleJobError(
-        "error in report assembly",
-        count_error=True,
-      ) from e
+      raise JobError(f"{type(e).__name__}: {e}", reason="error in report assembly") from e
 
 
 if __name__ == "__main__":

@@ -145,7 +145,7 @@ class CanRescheduleJobError(Exception):
 
 
 class JobError(Exception):
-  """Custom exception to indicate that a job has encountered an error."""
+  """A failure that retrying cannot fix: alerts immediately, then shuts the process down."""
 
   def __init__(self, message: str, reason: str | None = None, count_error: bool = False):
     """Store the error reason and whether this failure counts toward the error threshold."""
@@ -355,6 +355,11 @@ class JobBase(metaclass=SingletonTypeABC):
         except JobError as e:
           logger.error("%s: Job encountered a major error. Freezing this jobs execution", self.__class__.__name__, exc_info=e)
           self.errored = True
+          # A JobError is a failure that retrying cannot fix, so alert straight away instead of
+          # burning through the error threshold. `trigger_shutdown` alerts without rendering a
+          # traceback (see `error_reschedule`); it is a no-op under `__debug__`, hence the explicit
+          # `run_shutdown` after it.
+          trigger_shutdown(f"{self.__class__.__name__}: {e.reason}", str(e))
           run_shutdown(ShutdownKind.FATAL)  # drive the shutdown `main()` is awaiting
 
         except PoolClosedError:
