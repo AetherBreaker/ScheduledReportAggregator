@@ -246,3 +246,4 @@ timeclock_playground/
 /client_log_history
 *.jsonl
 *.key
+*.sql
