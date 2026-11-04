@@ -1,9 +1,10 @@
 """Weekly job that merges the RYO and SAS ACH draft files into one balance sheet and emails it."""
 
 # Standard library imports
+from csv import reader, writer
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from io import StringIO
 from logging import getLogger
 from pathlib import PurePosixPath
@@ -13,9 +14,10 @@ from typing import TYPE_CHECKING, TypedDict, override
 # Third party imports
 from dateutil.relativedelta import SA, SU, relativedelta
 from dateutil.rrule import DAILY, rrule
-from pandas import concat, isna, read_csv, to_numeric
+from pandas import Series, concat, isna, read_csv, to_numeric
 
 # First party imports
+from aeth_ext.errors.err_handling import alert
 from aeth_ext.types import EmailMessageParts
 from aeth_ext.utils import batch_send_emails, prepare_email_message, today
 from scheduled_report_aggregator.environment_init_vars import SETTINGS
@@ -23,13 +25,10 @@ from scheduled_report_aggregator.jobs.base import CanRescheduleJobError, FTPHand
 
 if TYPE_CHECKING:
   # Standard library imports
-  from collections.abc import Callable, Mapping
+  from collections.abc import Callable, Iterable, Mapping
   from pathlib import Path
   from re import Pattern
   from typing import ClassVar, Literal
-
-  # Third party imports
-  from pandas import Series
 
 logger = getLogger(__name__)
 
@@ -43,6 +42,9 @@ class FileVars:
   filename_pattern_factory: Callable[[datetime | None], Pattern[str]]
   local_holding_folder: Path
   dt_pattern: str
+  # How long after the week starts (Sunday 00:00 local) the file should be in. Past it, a missing
+  # file sends one alert for the week; the job keeps retrying either way.
+  deadline: relativedelta
 
   def __post_init__(self) -> None:
     self.local_holding_folder.mkdir(parents=True, exist_ok=True)
@@ -74,9 +76,9 @@ def assemble_ryo_filename_pattern(now: datetime | None = None) -> Pattern[str]:
     rf"(?P<day>{days_part})"
     r"(?P<hour>\d{2})"
     r"(?P<minute>\d{2})"
-    r"(?P<second>\d{2})"
-    r"(?P<microsecond>[1-9]{0,6}0*)"
-    r")\.csv$"
+    # The name is typed by hand and padded with a varying run of zeros after the minute (8, then
+    # 6 so far), so the timestamp stops at the minute and any padding is accepted.
+    r")\d*\.csv$"
   )
   return compile(pattern)
 
@@ -200,6 +202,66 @@ def extract_storenums(names: Series, overrides: Mapping[str, int] | None = None)
   return storenums
 
 
+def read_text_lenient(path: Path) -> str:
+  """Read a CSV as UTF-8, falling back to Windows-1252 (Excel's plain "CSV" save) when it isn't."""
+  raw = path.read_bytes()
+  try:
+    return raw.decode("utf-8-sig")
+  except UnicodeDecodeError:
+    logger.info("%s is not UTF-8; reading it as Windows-1252", path.name)
+    return raw.decode("cp1252", errors="replace")
+
+
+def parse_amount(raw: object) -> Decimal | str | None:
+  """Parse a money cell: a Decimal, None for a blank cell, or the raw text when it can't be read.
+
+  Handles "$1,234.56", "-$1,234.56", the accounting negative "$(1,234.56)" and the accounting zero
+  "$-". Returning unreadable text unchanged lets the row still reach the report, with a note.
+  """
+  if not isinstance(raw, str) or not raw.strip():
+    return None
+  text = "".join(raw.split()).replace("$", "").replace(",", "")
+  if text == "-":
+    return Decimal("0.00")
+  negative = text.startswith("(") and text.endswith(")")
+  if negative:
+    text = text[1:-1]
+  try:
+    value = Decimal(text)
+  except InvalidOperation:
+    return raw.strip()
+  if not value.is_finite():
+    return raw.strip()
+  return -value if negative else value
+
+
+def sum_amounts(amounts: Iterable[object]) -> Decimal | None:
+  """Sum the readable amounts in a group, or None when none of them could be read."""
+  readable = [amount for amount in amounts if isinstance(amount, Decimal)]
+  return sum(readable, Decimal(0)) if readable else None
+
+
+def join_notes(*notes: object) -> str | None:
+  """Join the non-empty notes once each, in order, or None when there are none."""
+  kept = dict.fromkeys(note for note in notes if isinstance(note, str) and note)
+  return "; ".join(kept) or None
+
+
+HEADER_DATE_FORMATS = ("%m/%d/%Y", "%m/%d/%y", "%Y-%m-%d")
+
+
+def format_header_date(raw: str | None, label: str) -> str:
+  """Reformat a RYO header date as YYYY/MM/DD, or keep the raw text, flagged, when it can't be read."""
+  text = (raw or "").strip()
+  for fmt in HEADER_DATE_FORMATS:
+    try:
+      return date.strptime(text, fmt).strftime("%Y/%m/%d")
+    except ValueError:
+      continue
+  logger.warning("Could not read the RYO file's %s %r; printing it as is", label, text)
+  return f"{text} (could not read this date)" if text else "(missing from the RYO file)"
+
+
 class DownloadedFiles(TypedDict):
   ryo: Path
   sas: Path
@@ -221,8 +283,10 @@ class BalanceSheetJob(JobBase):
         pickup_folder=PurePosixPath("/Accounting"),
         filename_pattern_factory=assemble_ryo_filename_pattern,
         local_holding_folder=self.job_holding_folder / "ryo",
-        # RYO_ACH_Drafts_20260618164600000000.csv
-        dt_pattern="%Y%m%d%H%M%S%f",
+        # RYO_ACH_Drafts_202611021157000000.csv; only the minute-precision part is the timestamp
+        dt_pattern="%Y%m%d%H%M",
+        # Ron usually uploads it on Monday: due by 15:00 Monday.
+        deadline=relativedelta(days=1, hours=15),
       ),
       "sas": FileVars(
         pickup_folder=PurePosixPath("/Outgoing/ach_detail"),
@@ -230,10 +294,14 @@ class BalanceSheetJob(JobBase):
         local_holding_folder=self.job_holding_folder / "sas",
         # Sweet_Fire_2026-06-17T03_31_24.476.csv
         dt_pattern="%Y-%m-%dT%H_%M_%S.%f",
+        # SAS's automated upload lands around 07:00 Wednesday: due by 08:00, an hour of grace.
+        deadline=relativedelta(days=3, hours=8),
       ),
     }
     self.job_output_folder = self.job_holding_folder / "output"
     self.job_output_folder.mkdir(parents=True, exist_ok=True)
+    # (source, week start) pairs already alerted as late, so each late file alerts once a week.
+    self.late_alerts_sent: set[tuple[FTPHandlerKey, date]] = set()
 
   @override
   def main_job(self) -> None:
@@ -261,16 +329,19 @@ class BalanceSheetJob(JobBase):
     """Fetch the newest matching file for one source, rescheduling if none is from this week."""
     file_vars = self.file_details[ftp_key]
     with self.ftp_session(ftp_key) as conn:
-      files = conn.listdir(file_vars.pickup_folder.as_posix())
+      files = list(conn.listdir(file_vars.pickup_folder.as_posix()))
       pattern = file_vars.filename_pattern_factory(today())
 
       filtered_files = filter(lambda f: pattern.match(f.filename), files)
+      # Uploaded this week but not matching the expected name: a misnamed file would be among these.
+      unmatched = [f.filename for f in files if not pattern.match(f.filename) and self.check_if_this_week(f.modified_time)]
 
       # check that filtered_files is not empty before calling max, otherwise it will raise a ValueError
       try:
         youngest_file = max(filtered_files, key=lambda f: f.modified_time)
       except ValueError:
         logger.warning("No matching files found in %s for FTP %s", file_vars, ftp_key)
+        self.alert_if_past_deadline(ftp_key, "no file with the expected name was found", unmatched_names=unmatched)
         raise CanRescheduleJobError(
           f"Error in downloading file: missing {ftp_key} file",
           reason=f"missing {ftp_key} file",
@@ -293,40 +364,92 @@ class BalanceSheetJob(JobBase):
         return local_file
 
       else:
+        self.alert_if_past_deadline(
+          ftp_key,
+          f"the newest file with the expected name, {youngest_file.filename}, is not from this week",
+          unmatched_names=unmatched,
+        )
         raise CanRescheduleJobError(
           f"Balance sheet file {ftp_key} is not from this week. Youngest file timestamp: {timestamp.isoformat()}",
+          reason=f"{ftp_key} file not from this week",
           count_error=False,
         ) from None
 
-  def download_all_files(self) -> DownloadedFiles:
-    """Download every source file, deleting partial downloads if any source fails."""
-    downloaded_files: dict[str, Path] = {}
-    with self.jobname_cvar.set(self.__class__.__name__):
-      for ftp_key in self.file_details:
-        try:
-          local_file = self.download_file(ftp_key)
-        except Exception:
-          for file in downloaded_files.values():
-            file.unlink(missing_ok=True)
-          raise
+  def alert_if_past_deadline(self, ftp_key: FTPHandlerKey, problem: str, unmatched_names: Iterable[str] = ()) -> None:
+    """Alert once per week when a source's file is still missing after its deadline.
 
-        downloaded_files[ftp_key] = local_file
+    The job keeps retrying either way; this only makes sure someone hears about a late, missing or
+    misnamed file instead of the job retrying silently.
+    """
+    file_vars = self.file_details[ftp_key]
+    now = datetime.now(tz=SETTINGS.tz)
+    week_start = now + relativedelta(weekday=SU(-1), hour=0, minute=0, second=0, microsecond=0)
+    deadline = week_start + file_vars.deadline
+    alert_key = (ftp_key, week_start.date())
+    if now < deadline or alert_key in self.late_alerts_sent:
+      return
+    self.late_alerts_sent.add(alert_key)
+
+    details = (
+      f"The {ftp_key.upper()} file for the week of {week_start:%Y-%m-%d} was due by {deadline:%a %Y-%m-%d %H:%M}, "
+      f"but {problem} in {file_vars.pickup_folder}.\n\n"
+      f"The job keeps checking every {self.reschedule_delay_minutes} minutes and sends the balance sheet once it arrives."
+    )
+    if unmatched_names := sorted(unmatched_names):
+      details += "\n\nFiles uploaded this week that did not match the expected name (a misnamed file may be among them):\n"
+      details += "\n".join(f"  {name}" for name in unmatched_names)
+    logger.warning("%s: %s file is late. %s", self.__class__.__name__, ftp_key, details)
+    alert(f"{self.__class__.__name__}: {ftp_key.upper()} file is late", details, in_except_block=False)
+
+  def download_all_files(self) -> DownloadedFiles:
+    """Download every source file; if any is missing, delete the rest and reschedule.
+
+    Every source is checked on each run, even after one turns up missing, so each file's deadline
+    is checked independently of the others.
+    """
+    downloaded_files: dict[str, Path] = {}
+    missing: list[CanRescheduleJobError] = []
+    with self.jobname_cvar.set(self.__class__.__name__):
+      try:
+        for ftp_key in self.file_details:
+          try:
+            downloaded_files[ftp_key] = self.download_file(ftp_key)
+          except CanRescheduleJobError as e:
+            missing.append(e)
+      except Exception:
+        for file in downloaded_files.values():
+          file.unlink(missing_ok=True)
+        raise
+
+    if missing:
+      for file in downloaded_files.values():
+        file.unlink(missing_ok=True)
+      if len(missing) == 1:
+        raise missing[0]
+      raise CanRescheduleJobError(
+        "; ".join(str(e) for e in missing),
+        reason=" and ".join(e.reason for e in missing),
+        count_error=False,
+      )
 
     return DownloadedFiles(**downloaded_files)
 
   def assemble_report(self, downloaded_files: DownloadedFiles) -> Path:
     """Merge the RYO and SAS CSVs per store into the combined balance sheet CSV."""
-    with downloaded_files["ryo"].open("r", encoding="utf-8") as ryo_file:
-      ryo_first_line = ryo_file.readline()
-      ryo_df = read_csv(
-        ryo_file,
-        header=0,
-        names=["store", "ryo", "ryo_notes", "store2", "ryo2", "notes2"],
-        dtype=str,
-      )
-    first_line_parts = ryo_first_line.strip().split(",")
-    ryo_extracted_date = date.strptime(first_line_parts[1], "%m/%d/%Y")
-    ryo_extracted_draft_date = date.strptime(first_line_parts[3], "%m/%d/%Y")
+    ryo_file = StringIO(read_text_lenient(downloaded_files["ryo"]))
+    # The first line is "DATE:,<date>,Draft Date:,<date>,,"; the table starts on the line after it.
+    first_line_parts = [*next(reader([ryo_file.readline()]), []), "", "", "", ""]
+    ryo_df = read_csv(
+      ryo_file,
+      header=0,
+      names=["store", "ryo", "ryo_notes", "store2", "ryo2", "notes2"],
+      dtype=str,
+      # Only an empty cell is missing; text like "N/A" stays text, so it gets an error note.
+      keep_default_na=False,
+      na_values=[""],
+    )
+    ryo_date = format_header_date(first_line_parts[1], "date")
+    ryo_draft_date = format_header_date(first_line_parts[3], "draft date")
 
     ryo_df_one = ryo_df[["store", "ryo", "ryo_notes"]]
     ryo_df_two = ryo_df[["store2", "ryo2", "notes2"]]
@@ -346,14 +469,16 @@ class BalanceSheetJob(JobBase):
     # Only rows with no store number keep a name, so they merge and print under it instead.
     ryo_df["store_name"] = ryo_df["store"].where(ryo_df["storenum"].isna())
 
-    # ryo_cleaned_amounts = ryo_df["ryo"].str.replace(r"[$,]", "", regex=True).str.replace("^-$", "0", regex=True)
-    # ryo_df["ryo"] = to_numeric(ryo_cleaned_amounts, errors="coerce").astype(float)
-    ryo_df["ryo_total"] = ryo_df["ryo"].str.replace(r"[$,]", "", regex=True).str.replace("^-$", "0.00", regex=True).map(Decimal)
+    # An unreadable amount keeps its raw text in the cell, and the row says so in its error notes.
+    ryo_df["ryo_total"] = Series([parse_amount(raw) for raw in ryo_df["ryo"]], index=ryo_df.index, dtype=object)
+    ryo_df["ryo_error_notes"] = [
+      f"RYO amount {total!r} could not be read" if isinstance(total, str) else None for total in ryo_df["ryo_total"]
+    ]
 
     # ryo_df.to_csv("test_ryo.csv", header=True, index=False)
 
     sas_df = read_csv(
-      downloaded_files["sas"],
+      StringIO(read_text_lenient(downloaded_files["sas"])),
       header=0,
       names=[
         "custnum",
@@ -374,17 +499,34 @@ class BalanceSheetJob(JobBase):
         "amount",
       ],
       dtype=str,
+      keep_default_na=False,
+      na_values=[""],
     )
 
     sas_df.loc[:, "store"] = sas_df["store"].str.strip()
     sas_df["storenum"] = extract_storenums(sas_df["store"], SAS_STORE_NAME_OVERRIDES)
     sas_df["store_name"] = sas_df["store"].where(sas_df["storenum"].isna())
 
-    sas_df["sas_total"] = sas_df["amount"].map(Decimal)
+    sas_df["sas_amount"] = Series([parse_amount(raw) for raw in sas_df["amount"]], index=sas_df.index, dtype=object)
+    sas_df["sas_error_notes"] = [
+      f"SAS amount {amount!r} on invoice {invoice} could not be read and is left out of the SAS total"
+      if isinstance(amount, str)
+      else f"SAS invoice {invoice} has no amount"
+      if amount is None
+      else None
+      for amount, invoice in zip(sas_df["sas_amount"], sas_df["invoice"], strict=True)
+    ]
     # sas_df.to_csv("test_sas.csv", header=True, index=False)
 
-    # group by store and aggregate the amount column; dropna=False keeps the unmatched-name groups
-    sas_grouped = sas_df.groupby(["storenum", "store_name"], dropna=False).agg({"sas_total": "sum"}).reset_index()
+    # group by store and total the readable amounts; dropna=False keeps the unmatched-name groups
+    sas_grouped = (
+      sas_df.groupby(["storenum", "store_name"], dropna=False)
+      .agg(
+        sas_total=("sas_amount", sum_amounts),
+        sas_error_notes=("sas_error_notes", lambda notes: join_notes(*notes)),
+      )
+      .reset_index()
+    )
 
     # sas_grouped.to_csv("test_sas_agged.csv", header=True, index=False)
 
@@ -392,9 +534,21 @@ class BalanceSheetJob(JobBase):
     merged_df = ryo_df.merge(sas_grouped, on=["storenum", "store_name"], how="outer")
     merged_df = merged_df.sort_values("storenum", na_position="last", kind="stable")
 
-    unmatched = merged_df.loc[merged_df["storenum"].isna(), "store_name"].tolist()
-    if unmatched:
-      logger.warning("%s: No store number found for %s; kept under their original names", self.__class__.__name__, unmatched)
+    # Anything that went wrong with a row is written on that row, so whoever reads the sheet sees it.
+    store_notes = [
+      None
+      if not isna(storenum)
+      else f"No store number found in the name {name!r}"
+      if isinstance(name, str)
+      else "No store name or number"
+      for storenum, name in zip(merged_df["storenum"], merged_df["store_name"], strict=True)
+    ]
+    merged_df["error_notes"] = [
+      join_notes(*notes) for notes in zip(store_notes, merged_df["ryo_error_notes"], merged_df["sas_error_notes"], strict=True)
+    ]
+    flagged = merged_df["error_notes"].dropna().tolist()
+    if flagged:
+      logger.warning("%s: %d balance sheet row(s) have error notes: %s", self.__class__.__name__, len(flagged), flagged)
 
     merged_df["storenum"] = merged_df["storenum"].astype("string").fillna(merged_df["store_name"])
     # merged_df.to_csv("test_merged.csv", header=True, index=True)
@@ -405,17 +559,14 @@ class BalanceSheetJob(JobBase):
         "ryo_total",
         "sas_total",
         "ryo_notes",
+        "error_notes",
       ]
     ]
 
     io_stream = StringIO(newline=None)
 
-    io_stream.writelines(
-      [
-        f"RYO Date:,{ryo_extracted_date.strftime('%Y/%m/%d')}\n",
-        f"RYO Draft Date:,{ryo_extracted_draft_date.strftime('%Y/%m/%d')}\n",
-      ]
-    )
+    # csv.writer quotes a raw, unreadable date that happens to contain a comma.
+    writer(io_stream, lineterminator="\n").writerows([["RYO Date:", ryo_date], ["RYO Draft Date:", ryo_draft_date]])
 
     merged_df.to_csv(io_stream, header=True, index=False)
 
@@ -423,7 +574,8 @@ class BalanceSheetJob(JobBase):
 
     out_file = self.job_output_folder / f"sas_ryo_balance_sheet_{now.strftime('%Y%m%d%H%M%S%f')}.csv"
 
-    with out_file.open("w") as report_file:
+    # UTF-8 with a BOM so Excel shows any non-ASCII text from the source files (e.g. in notes) correctly.
+    with out_file.open("w", encoding="utf-8-sig") as report_file:
       report_file.write(io_stream.getvalue())
 
     return out_file
